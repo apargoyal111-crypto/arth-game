@@ -341,7 +341,7 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(0.05,(now-las
  if(near&&!G.PANEL){if(meetId!==near[0]){meetId=near[0];meet.textContent='👋 '+near[1]+' से मिलो'}meet.style.display='block'}else{meet.style.display='none';meetId=null}
  for(const n of npcs){const ch=n.ch;const dx=n.t[0]-ch.position.x,dz=n.t[1]-ch.position.z,dd=Math.hypot(dx,dz);if(dd<1)n.t=roadPt();else{const s=1.8;ch.position.x+=dx/dd*s*dt;ch.position.z+=dz/dd*s*dt;ch.rotation.y=Math.atan2(dx,dz)}animate(ch,1.8,dt)}
  // network presence
- if(alive&&G.S&&now-lastSend>125){const moved=Math.abs(P.x-sent.x)+Math.abs(P.z-sent.z)+Math.abs(P.ry-sent.ry)>0.03;if(moved||now-lastSend>2000){G.S({t:'pos',x:+P.x.toFixed(2),z:+P.z.toFixed(2),ry:+P.ry.toFixed(2)});sent={x:P.x,z:P.z,ry:P.ry};lastSend=now}}
+ if(alive&&G.S&&now-lastSend>125){const moved=Math.abs(P.x-sent.x)+Math.abs(P.z-sent.z)+Math.abs(P.ry-sent.ry)>0.03;if(moved||now-lastSend>2000){G.S({t:'pos',x:+P.x.toFixed(2),z:+P.z.toFixed(2),ry:+Math.atan2(Math.sin(P.ry),Math.cos(P.ry)).toFixed(2)});sent={x:P.x,z:P.z,ry:P.ry};lastSend=now}}
  if(now-saveT>3000){saveT=now;try{localStorage.setItem('zpos',JSON.stringify({x:P.x,z:P.z}))}catch(e){}}
  renderer.render(scene,camera);
 }
