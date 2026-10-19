@@ -83,8 +83,9 @@ for(const l of LM){
  const disc=new THREE.Mesh(new THREE.CircleGeometry(2.4,32),new THREE.MeshBasicMaterial({color:0xffe9a0,transparent:true,opacity:.35,depthWrite:false}));disc.rotation.x=-Math.PI/2;disc.position.set(zx,0.11,zz);scene.add(disc);
  zones.push({n:l.n,x:zx,z:zz,ring,disc,inside:false});
 }
-// park: pond + benches
-{const pond=new THREE.Mesh(new THREE.CircleGeometry(5,24),M('#4fa3d9'));pond.rotation.x=-Math.PI/2;pond.position.set(6,0.09,45);scene.add(pond);colliders.push({x0:2,x1:10,z0:41,z1:49})}
+// park: pond + benches (pond kept clear of the 3.2m park trigger ring at (0,40): nearest collider corner is ~3.5m away)
+const POND={x:7,z:47,r:4.5};
+{const pond=new THREE.Mesh(new THREE.CircleGeometry(POND.r,24),M('#4fa3d9'));pond.rotation.x=-Math.PI/2;pond.position.set(POND.x,0.09,POND.z);scene.add(pond);colliders.push({x0:POND.x-POND.r,x1:POND.x+POND.r,z0:POND.z-POND.r,z1:POND.z+POND.r})}
 // chowk fountain at centre
 solid(3,1,3,'#cfd6e4',0,0);{const w=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.6,3,8),M('#9fb3d9'));w.position.set(0,1.5,0);scene.add(w)}
 // filler buildings (instanced) + trees (instanced)
@@ -96,7 +97,7 @@ function nearLM(x,z,pad){return LM.some(l=>Math.abs(x-l.x)<9+pad&&Math.abs(z-l.z
  spots.forEach((p,i)=>{const h=4+rnd()*14;p.h=h;o.position.set(p[0],h/2,p[1]);o.scale.set(p[2],h,p[3]);o.updateMatrix();im.setMatrixAt(i,o.matrix);im.setColorAt(i,new THREE.Color(cols[Math.floor(rnd()*cols.length)]));colliders.push({x0:p[0]-p[2]/2,x1:p[0]+p[2]/2,z0:p[1]-p[3]/2,z1:p[1]+p[3]/2,h:p.h})});
  scene.add(im);}
 {const pts=[];for(const r of ROADS)for(let k=-84;k<=84;k+=7){for(const s of[-5.5,5.5]){const a=[r+s,k],b=[k,r+s];for(const q of[a,b])if(!onRoad(q[0],q[1],0.5)&&!nearLM(q[0],q[1],1)&&rnd()<.55)pts.push(q)}}
- for(let i=0;i<40;i++){const x=-15+rnd()*30,z=30+rnd()*25;if(Math.hypot(x-6,z-45)>6.5&&Math.hypot(x,z-48)>4)pts.push([x,z])}
+ for(let i=0;i<40;i++){const x=-15+rnd()*30,z=30+rnd()*25;if(Math.hypot(x-POND.x,z-POND.z)>POND.r+1.5&&Math.hypot(x,z-48)>4&&Math.hypot(x,z-40)>4.5)pts.push([x,z])}
  const tg=new THREE.CylinderGeometry(0.25,0.35,2,6),cg=new THREE.ConeGeometry(1.6,3.6,7);
  const ti=new THREE.InstancedMesh(tg,M('#7a5236'),pts.length),ci=new THREE.InstancedMesh(cg,M('#3f8f4a'),pts.length);const o=new THREE.Object3D();
  pts.forEach((p,i)=>{const s=.8+rnd()*.6;o.scale.set(s,s,s);o.position.set(p[0],1*s,p[1]);o.updateMatrix();ti.setMatrixAt(i,o.matrix);o.position.set(p[0],(2+1.6)*s,p[1]);o.updateMatrix();ci.setMatrixAt(i,o.matrix);ci.setColorAt(i,new THREE.Color().setHSL(.3+rnd()*.06,.45,.32+rnd()*.12));colliders.push({x0:p[0]-.4,x1:p[0]+.4,z0:p[1]-.4,z1:p[1]+.4})});
@@ -138,12 +139,13 @@ const vehicles=[];
  const seat=new THREE.Mesh(new THREE.BoxGeometry(.5,.06,.9),MS({color:'#333'}));seat.position.set(px+1,.8,pz-3);scene.add(seat);
  const sl=new THREE.Mesh(new THREE.BoxGeometry(1,.1,4),MS({color:'#2e86de',roughness:.3}));sl.position.set(px+1,1.2,pz+3);sl.rotation.x=.5;scene.add(sl);const ld=new THREE.Mesh(new THREE.BoxGeometry(1,2.4,.2),MS({color:'#f1c40f'}));ld.position.set(px+1,1.2,pz+1.1);scene.add(ld)}
 // bazaar stalls
-{const cols=['#e74c3c','#f39c12','#16a085','#8e44ad','#2980b9'];for(let i=0;i<5;i++){const x=30+i*4.5,z=12;const t=new THREE.Mesh(new THREE.BoxGeometry(3,1,1.6),MS({map:TEX.plaster,color:'#a0785a'}));t.position.set(x,.5,z);scene.add(t);
+{const cols=['#e74c3c','#f39c12','#16a085','#8e44ad','#2980b9'];for(let i=0;i<5;i++){const x=30+i*4.5,z=13.2; // z=13.2: stall collider (z>=12.4) stays clear of the बाज़ार ring (z<=11.2)
+const t=new THREE.Mesh(new THREE.BoxGeometry(3,1,1.6),MS({map:TEX.plaster,color:'#a0785a'}));t.position.set(x,.5,z);scene.add(t);
  const aw=new THREE.Mesh(new THREE.BoxGeometry(3.4,.1,2.2),MS({color:cols[i]}));aw.position.set(x,2.4,z+.2);aw.rotation.x=.25;scene.add(aw);for(const dx of[-1.5,1.5]){const p=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,2.4,5),MS({color:'#6b4f3a'}));p.position.set(x+dx,1.2,z+.9);scene.add(p)}
  for(let k=0;k<5;k++){const f=new THREE.Mesh(new THREE.SphereGeometry(.16,6,5),MS({color:['#ff6b35','#ffd23f','#3bb273','#e63946','#f4a261'][(i+k)%5]}));f.position.set(x-1+k*.5,1.12,z);scene.add(f)}colliders.push({x0:x-1.5,x1:x+1.5,z0:z-.8,z1:z+.8})}}
 // park benches + flowers + bushes
 {const bm=MS({color:'#8d5a33'}),im=MS({color:'#2d2d2d',metalness:.5});for(const [x,z,r] of[[-6,36,0],[-6,44,0],[13,40,Math.PI/2],[-2,52,Math.PI/2]]){const g=new THREE.Group();const s=new THREE.Mesh(new THREE.BoxGeometry(2,.1,.6),bm);s.position.y=.5;g.add(s);const b=new THREE.Mesh(new THREE.BoxGeometry(2,.5,.08),bm);b.position.set(0,.8,-.28);g.add(b);for(const dx of[-.9,.9]){const l=new THREE.Mesh(new THREE.BoxGeometry(.08,.5,.6),im);l.position.set(dx,.25,0);g.add(l)}g.position.set(x,0,z);g.rotation.y=r;scene.add(g)}
- const n=WEAK?120:260,fl=new THREE.InstancedMesh(new THREE.SphereGeometry(.13,5,4),MS({roughness:.6}),n),o=new THREE.Object3D();for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,r=6+Math.random()*3;o.position.set(6+Math.cos(a)*r,.2,45+Math.sin(a)*r);o.updateMatrix();fl.setMatrixAt(i,o.matrix);fl.setColorAt(i,new THREE.Color(['#ff4d6d','#ffd23f','#ffffff','#c77dff','#ff8c42'][i%5]))}scene.add(fl);
+ const n=WEAK?120:260,fl=new THREE.InstancedMesh(new THREE.SphereGeometry(.13,5,4),MS({roughness:.6}),n),o=new THREE.Object3D();for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,r=POND.r+1+Math.random()*2.5;o.position.set(POND.x+Math.cos(a)*r,.2,POND.z+Math.sin(a)*r);o.updateMatrix();fl.setMatrixAt(i,o.matrix);fl.setColorAt(i,new THREE.Color(['#ff4d6d','#ffd23f','#ffffff','#c77dff','#ff8c42'][i%5]))}scene.add(fl);
  const bn=60,bu=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.8,0),MS({color:'#3e7d3a'}),bn);for(let i=0;i<bn;i++){const r=ROADS[i%4],k=-80+Math.random()*160,s=(Math.random()<.5?-1:1)*6.6;const p=i%2?[r+s,k]:[k,r+s];if(onRoad(p[0],p[1],0)){o.position.set(0,-5,0)}else o.position.set(p[0],.4,p[1]);o.scale.setScalar(.6+Math.random()*.6);o.updateMatrix();bu.setMatrixAt(i,o.matrix);bu.setColorAt(i,new THREE.Color().setHSL(.28+Math.random()*.08,.5,.25+Math.random()*.12))}o.scale.setScalar(1);scene.add(bu)}
 // round-canopy trees for variety
 {const n=50,tr=new THREE.InstancedMesh(new THREE.CylinderGeometry(.2,.3,2.4,6),MS({color:'#6b4a2f'}),n),cn=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1.8,1),MS({color:'#4c9a3f'}),n),o=new THREE.Object3D();let i=0;

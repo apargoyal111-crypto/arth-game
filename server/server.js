@@ -14,7 +14,8 @@ const PORT=Number(env.PORT)||3000;
 const DATA=env.DATA_FILE||path.join(__dirname,'data','world.json');
 const ICE=[{urls:'stun:stun.l.google.com:19302'}];
 if(env.TURN_URL)ICE.push({urls:env.TURN_URL.split(','),username:env.TURN_USER||'',credential:env.TURN_PASS||''});
-const HB_MS=Number(env.HEARTBEAT_MS)||15000;
+const HB_MS=Number(env.HEARTBEAT_MS)||25000; // < Render's idle cutoff (~270s); keeps proxies from dropping idle sockets
+const SIGNUP_DEDUP_MS=Number(env.SIGNUP_DEDUP_MS)||5000;
 const RATE=Number(env.RATE_PER_SEC)||6, RATE_BURST=Number(env.RATE_BURST)||30; // per-connection token bucket
 
 // ---------- persistence (JSON, atomic write) ----------
@@ -30,7 +31,9 @@ const LOOKS=['normal','apara','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10'
 const clean=(s,n)=>String(s==null?'':s).replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,n);
 const uid=()=>crypto.randomBytes(6).toString('hex');
 const now=()=>Date.now();
-const socks=new Map(); // playerId -> ws
+const socks=new Map(); // playerId -> ws (only the player's single live socket)
+const isOnline=id=>{const w=socks.get(id);return !!w&&w.readyState===1}; // online is derived from a live socket, never stored
+const recentSignups=new Map(); // ip|name|g -> {id,t}: collapses double-taps / retried signups into one account
 const pkey=(a,b)=>[a,b].sort().join(':');
 function send(ws,o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
 function sendTo(id,o){send(socks.get(id),o)}
@@ -62,7 +65,7 @@ function worldEvent(){const e=WEV[Math.floor(Math.random()*WEV.length)];
  feed(e.t,e.k)}
 
 // ---------- player model ----------
-function pub(p){return {id:p.id,name:p.name,g:p.g,look:look(p.look),online:socks.has(p.id),state:p.state,
+function pub(p){return {id:p.id,name:p.name,g:p.g,look:look(p.look),online:isOnline(p.id),state:p.state,
  age:p.life?p.life.age:0,job:p.life?p.life.job:'',married:!!p.spouse,spouse:p.spouse&&db.players[p.spouse]?db.players[p.spouse].name:'',
  kids:p.life?p.life.kids:0,lives:p.lives.length,friends:p.friends.length}}
 function playersList(){return Object.values(db.players).map(pub).sort((a,b)=>b.online-a.online)}
@@ -93,7 +96,7 @@ function finishLife(p){const L=p.life;if(!L)return;
  p.lives.push(sum);p.life=null;p.state='dead';db.world.deaths++;
  if(p.spouse&&db.players[p.spouse]){const s=db.players[p.spouse];s.spouse=null;if(s.life){s.life.married=false;s.life.partner='';s.life.j=E.cl(s.life.j-20)}sendTo(s.id,{t:'notif',text:'🕯️ आपके जीवनसाथी '+p.name+' का निधन हो गया।'});pushMe(s)}
  p.spouse=null;feed('🕯️ '+p.name+' का '+L.age+' साल की उम्र में निधन — '+L.cause,'death');mark();pushMe(p);pushPlayers()}
-function socialBonus(p){const L=p.life;if(!L)return;const on=p.friends.filter(id=>socks.has(id)).length;
+function socialBonus(p){const L=p.life;if(!L)return;const on=p.friends.filter(isOnline).length;
  L.r=E.cl(L.r+Math.min(4,p.friends.length)+(p.spouse?2:0));L.j=E.cl(L.j+Math.min(3,on));}
 
 // ---------- action handlers (all validated server-side) ----------
@@ -140,7 +143,7 @@ const H={
   for(const x of [p,s]){const L=x.life;L.kids++;L.kidAt=L.age;L.money-=50000;L.j=E.cl(L.j+12);L.r=E.cl(L.r+8);L.hl.push({a:L.age,t:'बच्चे '+kn+' का जन्म ('+(x===p?s.name:p.name)+' के साथ)'})}
   db.world.births++;feed('👶 '+p.name+' और '+s.name+' के घर '+kn+' का जन्म!','birth');mark();pushMe(p);pushMe(s);pushPlayers()},
  rtc(p,m){const kinds=['ring','accept','decline','hangup','offer','answer','ice','busy'];if(!kinds.includes(m.kind))return;
-  const to=db.players[m.to];if(!to)return;if(!socks.has(to.id)){if(m.kind==='ring')send(socks.get(p.id),{t:'rtc',from:to.id,kind:'unavailable'});return}
+  const to=db.players[m.to];if(!to)return;if(!isOnline(to.id)){if(m.kind==='ring')send(socks.get(p.id),{t:'rtc',from:to.id,kind:'unavailable'});return}
   const data=m.data===undefined?null:m.data;if(JSON.stringify(data||'').length>20000)return;
   sendTo(to.id,{t:'rtc',from:p.id,fromName:p.name,kind:m.kind,data})},
  profile(p,m){const t=db.players[m.id];if(!t)return;send(socks.get(p.id),{t:'profile',p:pub(t),lives:t.lives.slice(-3).map(l=>({age:l.age,score:l.score,rating:l.rating,cause:l.cause}))})},
@@ -157,7 +160,7 @@ function onPos(p,m){const t=now(),o=POS.get(p.id);if(o&&t-o.t<90)return; // ~10/
  const f=(v,a)=>{v=Number(v);return Number.isFinite(v)?Math.max(-a,Math.min(a,v)):0};
  POS.set(p.id,{x:Math.round(f(m.x,MAP)*100)/100,z:Math.round(f(m.z,MAP)*100)/100,ry:Math.round(f(m.ry,7)*100)/100,t,ch:true})}
 setInterval(()=>{if(!POS.size)return;let changed=false;const list=[];
- for(const [id,o] of POS){if(!socks.has(id)){POS.delete(id);continue}const p=db.players[id];if(!p)continue;if(o.ch)changed=true;o.ch=false;
+ for(const [id,o] of POS){if(!isOnline(id)){POS.delete(id);continue}const p=db.players[id];if(!p)continue;if(o.ch)changed=true;o.ch=false;
   list.push({id,x:o.x,z:o.z,ry:o.ry,n:p.name,g:p.g,l:look(p.look),a:p.life?p.life.age:0})}
  if(changed||Math.random()<.1)bcast({t:'poses',list});},125).unref();
 
@@ -170,34 +173,47 @@ app.use(express.static(path.join(__dirname,'..','public'),{maxAge:0}));
 app.get('/health',(q,r)=>r.json({ok:true,players:Object.keys(db.players).length,active:socks.size}));
 const server=http.createServer(app);
 const wss=new WebSocketServer({server,maxPayload:32*1024});
-wss.on('connection',ws=>{
- ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.bucket={n:RATE_BURST,t:now()};let me=null;
+function detach(ws,p){ // drop p's socket entry only if it is still this ws; online/activeMs follow
+ if(p&&socks.get(p.id)===ws){p.activeMs=activeNow(p);socks.delete(p.id);POS.delete(p.id);pushPlayers()}}
+function clientIp(req){const xf=req&&req.headers&&req.headers['x-forwarded-for'];
+ return String(xf?String(xf).split(',')[0]:(req&&req.socket&&req.socket.remoteAddress)||'').trim()}
+setInterval(()=>{const t=now();for(const [k,v] of recentSignups)if(t-v.t>SIGNUP_DEDUP_MS)recentSignups.delete(k)},10000).unref();
+wss.on('connection',(ws,req)=>{
+ const ip=clientIp(req);ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.bucket={n:RATE_BURST,t:now()};let me=null;
  ws.on('message',raw=>{
+  if(me&&socks.get(me.id)!==ws)me=null; // replaced by a newer login elsewhere: this socket no longer speaks for the player
   if(raw.length<200&&me&&String(raw).indexOf('"pos"')>0){let m;try{m=JSON.parse(raw)}catch(e){return}if(m&&m.t==='pos'){ws.alive=true;return onPos(me,m)}}
   const b=ws.bucket,t=now();b.n=Math.min(RATE_BURST,b.n+(t-b.t)/1000*RATE);b.t=t;if(b.n<1)return send(ws,{t:'err',text:'बहुत तेज़! थोड़ा धीरे।'});b.n--;
   let m;try{m=JSON.parse(raw)}catch(e){return}if(!m||typeof m.t!=='string')return;ws.alive=true;
   try{
-   if(m.t==='signup'){const name=clean(m.name,20);if(!name)return send(ws,{t:'err',text:'नाम ज़रूरी है'});
-    const g=m.g==='f'?'f':m.g==='m'?'m':(Math.random()<.5?'m':'f');
+   if(m.t==='signup'){if(me)m={t:'hello',token:me.token}; // this socket already has a player: never mint a second one
+    else{const name=clean(m.name,20);if(!name)return send(ws,{t:'err',text:'नाम ज़रूरी है'});
+    const gi=m.g==='f'?'f':m.g==='m'?'m':'r',dk=ip+'|'+name+'|'+gi,rec=recentSignups.get(dk);
+    if(rec&&now()-rec.t<SIGNUP_DEDUP_MS&&db.players[rec.id])m={t:'hello',token:db.players[rec.id].token}; // same name+gender from same IP within window = same account
+    else{const g=gi==='r'?(Math.random()<.5?'m':'f'):gi;
     const p={id:uid(),token:crypto.randomBytes(18).toString('hex'),name,g,created:now(),pregStart:now(),state:'preg',life:null,lives:[],activeMs:0,lastTurnMs:0,friends:[],friendReq:[],proposals:[],spouse:null,look:look(m.look)};
-    db.players[p.id]=p;mark();m={t:'hello',token:p.token};feed('🤰 एक नया जीव पुणे में आने वाला है: '+name,'preg')}
+    db.players[p.id]=p;mark();recentSignups.set(dk,{id:p.id,t:now()});m={t:'hello',token:p.token};feed('🤰 एक नया जीव पुणे में आने वाला है: '+name,'preg')}}}
    if(m.t==='hello'){const p=Object.values(db.players).find(x=>x.token===String(m.token||''));if(!p)return send(ws,{t:'auth_fail'});
-    const old=socks.get(p.id);if(old&&old!==ws){send(old,{t:'err',text:'दूसरी जगह से लॉगिन हुआ'});old.close()}
+    if(me&&me.id!==p.id)detach(ws,me); // socket switched accounts: previous account goes offline
+    const old=socks.get(p.id);if(old&&old!==ws){socks.delete(p.id);send(old,{t:'err',text:'दूसरी जगह से लॉगिन हुआ'});try{old.close()}catch(e){}}
     me=p;ws.pid=p.id;socks.set(p.id,ws);
     send(ws,{t:'auth',token:p.token,id:p.id,ice:ICE,cfg:{pregMs:PREG_MS,turnMs:TURN_MS,scale:SCALE}});
     pushMe(p);send(ws,{t:'world',w:worldView()});pushPlayers();return}
    if(m.t==='admin'){const K=String(env.ADMIN_KEY||''),k=String(m.key||'');
     if(!me||!K||k.length!==K.length||!crypto.timingSafeEqual(Buffer.from(k),Buffer.from(K)))return send(ws,{t:'err',text:'गलत एडमिन कुंजी'});
     me.admin=true;mark();if(me.state==='preg'){startLife(me);pushPlayers()}pushMe(me);return send(ws,{t:'err',text:'👑 स्पेशल एक्सेस चालू!'})}
-   if(!me){if(m.t==='ping')return;return send(ws,{t:'err',text:'पहले लॉगिन करें'})}
+   if(!me){if(m.t==='ping')return send(ws,{t:'pong'});return send(ws,{t:'err',text:'पहले लॉगिन करें'})}
    const h=H[m.t];if(h&&Object.prototype.hasOwnProperty.call(H,m.t))h(me,m);
   }catch(e){console.error('handler error',m&&m.t,e);send(ws,{t:'err',text:'सर्वर त्रुटि'})}
  });
- ws.on('close',()=>{if(me&&socks.get(me.id)===ws){me.activeMs=activeNow(me);socks.delete(me.id);pushPlayers()}});
+ ws.on('close',()=>{detach(ws,me);me=null});
  ws.on('error',()=>{});
 });
 // heartbeat: dead connections -> SLEEPING
-setInterval(()=>{for(const ws of wss.clients){if(!ws.alive){ws.terminate();continue}ws.alive=false;try{ws.ping()}catch(e){}}},HB_MS).unref();
+// keepalive: protocol ping + a tiny app-level frame so proxies (Render ~270s idle cutoff) always see traffic, even pre-login
+setInterval(()=>{for(const ws of wss.clients){if(!ws.alive){ws.terminate();continue}ws.alive=false;try{ws.ping()}catch(e){}send(ws,{t:'hb'})}},HB_MS).unref();
+// self-heal: any map entry whose socket is no longer open is not online
+setInterval(()=>{for(const [id,w] of socks)if(w.readyState!==1){const p=db.players[id];if(p)p.activeMs=activeNow(p);socks.delete(id);pushPlayers()}},5000).unref();
 
 // ---------- world clock ----------
 let last=now();
