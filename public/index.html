@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="hi"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta name="theme-color" content="#5b6cff"><title>ज़िंदगी ऑनलाइन</title>
+<meta name="theme-color" content="#5b6cff"><title>अर्थ — ज़िंदगी 3D</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Noto Sans Devanagari','Mangal','Nirmala UI',system-ui,sans-serif;background:linear-gradient(180deg,#eef1ff,#f8f4ff);color:#2a2d3e;min-height:100vh;font-size:17px;line-height:1.55;padding-bottom:74px}
@@ -48,21 +48,46 @@ nav button.on{color:#4450d8;font-weight:700}nav button b{display:block;font-size
 .belly{font-size:90px;text-align:center;animation:beat 1.6s infinite}@keyframes beat{50%{transform:scale(1.07)}}
 .months{display:flex;gap:4px;margin:12px 0}.months span{flex:1;height:10px;border-radius:5px;background:#e6e8f3}.months span.on{background:#f48fb1}
 .feed .li{border-color:#9be3c0}
+
+/* ---- 3D shell ---- */
+html,body{height:100%;overflow:hidden}
+body{padding:0;background:#9fc7ef;overscroll-behavior:none;-webkit-user-select:none;user-select:none;touch-action:none}
+#c3d{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
+#stats{position:fixed;left:0;right:0;top:0;background:rgba(255,255,255,.88);z-index:7}
+#pw{position:fixed;left:0;right:0;top:44px;bottom:62px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:4;background:rgba(238,241,255,.86);touch-action:pan-y;-webkit-user-select:text;user-select:text}
+body.city #pw{display:none}
+#pclose{position:sticky;top:0;z-index:3;display:flex;justify-content:flex-end;max-width:560px;margin:0 auto;padding:6px 12px 0}
+#pclose button{min-height:44px;border:none;border-radius:22px;background:#2a2d3e;color:#fff;font:inherit;font-size:14px;padding:6px 14px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.ctl{display:none}body.city .ctl{display:block}
+#joy{position:fixed;left:18px;bottom:86px;width:132px;height:132px;border-radius:50%;background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.55);z-index:5;touch-action:none}
+#knob{position:absolute;left:41px;top:41px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+#run{position:fixed;right:18px;bottom:96px;width:76px;height:76px;border-radius:50%;border:none;background:rgba(91,108,255,.85);color:#fff;font:inherit;font-weight:700;font-size:15px;z-index:5;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+#run.on{background:#e5484d}
+#meet{position:fixed;left:50%;transform:translateX(-50%);bottom:200px;z-index:5;display:none;min-height:50px;padding:10px 18px;border:none;border-radius:26px;background:#22a565;color:#fff;font:inherit;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+#hint{position:fixed;left:50%;transform:translateX(-50%);top:150px;z-index:5;background:rgba(42,45,62,.82);color:#fff;border-radius:14px;padding:6px 14px;font-size:14px;max-width:88%;text-align:center;pointer-events:none}
+#zoneBanner{display:block;background:#fff3e0;color:#b26a00;border-radius:12px;padding:6px 12px;margin-top:10px;font-weight:700;font-size:15px}
+nav{z-index:8}nav button.city{color:#22a565}
 </style></head><body>
 <div id="conn">🔌 कनेक्शन टूटा — फिर से जोड़ रहे हैं…</div><div id="toast"></div>
 <div id="stats" style="display:none"></div>
-<div class="wrap" id="app"><h1>🌧️ ज़िंदगी ऑनलाइन</h1><p class="small" style="text-align:center">सर्वर से जुड़ रहे हैं…</p></div>
+<canvas id="c3d"></canvas>
+<div id="pw"><div id="pclose"><button id="pcb">✕ शहर में घूमें 🏙️</button></div><div class="wrap" id="app"><h1>🌧️ ज़िंदगी ऑनलाइन</h1><p class="small" style="text-align:center">सर्वर से जुड़ रहे हैं…</p></div></div>
+<div class="ctl" id="joy"><div id="knob"></div></div><button class="ctl" id="run">🏃 दौड़</button><button id="meet"></button><div class="ctl" id="hint"></div>
 <nav id="nav" style="display:none">
- <button data-tab="life" class="on"><b>🧬</b>जीवन</button><button data-tab="world"><b>🌍</b>दुनिया</button>
+ <button data-city="1" class="city"><b>🏙️</b>शहर</button> <button data-tab="life" class="on"><b>🧬</b>जीवन</button><button data-tab="world"><b>🌍</b>दुनिया</button>
  <button data-tab="people"><b>👥</b>लोग<span class="dot" id="dP" style="display:none"></span></button><button data-tab="chat"><b>💬</b>संदेश<span class="dot" id="dC" style="display:none"></span></button>
 </nav>
 <div id="call"></div>
 <audio id="remote" autoplay playsinline></audio>
 <script>
 "use strict";
+var PANEL=true,ZONE=null;function mustPanel(){return !ME||ME.state!=="alive"}
+function setPanel(v){if(!v&&mustPanel())v=true;PANEL=v;document.body.classList.toggle("city",!v);var c=document.getElementById("pclose");if(c)c.style.visibility=mustPanel()?"hidden":"visible"}
+function fitPanel(){var st=$("stats"),h=st&&st.style.display!=="none"?st.offsetHeight:0;$("pw").style.top=h+"px"}
+window.openLife=function(z){ZONE=z;tab="life";chatWith=null;setPanel(true);render()};window.onPoses=null;window.onFeed=null;
 var viewP=false,ws=null,ME=null,W={feed:[]},PL=[],TOK=null,ICE=[{urls:'stun:stun.l.google.com:19302'}],tab='life',chatWith=null,HIST={},unread={},gsel='r',retry=0,waitT=null,lastMeAt=0;
-try{var q0=new URLSearchParams(location.search).get('admin');if(q0){localStorage.setItem('zadmin',q0);history.replaceState(null,'',location.pathname)}}catch(e){}
 try{var q=new URLSearchParams(location.search).get('token');if(q)localStorage.setItem('zt',q);TOK=localStorage.getItem('zt')}catch(e){}
+try{var q0=new URLSearchParams(location.search).get('admin');if(q0){localStorage.setItem('zadmin',q0);history.replaceState(null,'',location.pathname)}}catch(e){}
 function $(i){return document.getElementById(i)}
 function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function fmt(n){n=Math.round(n||0);var neg=n<0;n=Math.abs(n);var s=String(n),l=s.slice(-3),r=s.slice(0,-3);if(r)l=r.replace(/\B(?=(\d{2})+(?!\d))/g,',')+','+l;return (neg?'-':'')+l}
@@ -78,10 +103,10 @@ setInterval(function(){S({t:'ping'})},20000);
 function on(m){
  if(m.t==='auth'){TOK=m.token;try{localStorage.setItem('zt',TOK)}catch(e){}ICE=m.ice||ICE;$('nav').style.display='flex';try{var ak=localStorage.getItem('zadmin');if(ak)S({t:'admin',key:ak})}catch(e){}}
  else if(m.t==='auth_fail'){TOK=null;try{localStorage.removeItem('zt')}catch(e){}signup()}
- else if(m.t==='me'){ME=m;lastMeAt=Date.now();var n=(m.friendReq.length+m.proposals.length);$('dP').style.display=n?'block':'none';$('dP').textContent=n;if(tab==='life'||(tab==='people'&&!viewP))render();else renderStats()}
+ else if(m.t==='me'){ME=m;setPanel(mustPanel()?true:PANEL);lastMeAt=Date.now();var n=(m.friendReq.length+m.proposals.length);$('dP').style.display=n?'block':'none';$('dP').textContent=n;if(tab==='life'||(tab==='people'&&!viewP))render();else renderStats()}
  else if(m.t==='world'){W=m.w;if(tab==='world')render();renderStats()}
  else if(m.t==='tick'){W.day=m.day;W.year=m.year;W.active=m.active;W.births=m.births;W.deaths=m.deaths;renderStats();if(tab==='world'){var x=$('wclock');if(x)x.innerHTML=clockHtml()}}
- else if(m.t==='feed'){W.feed.unshift(m.item);W.feed.length=Math.min(W.feed.length,40);if(tab==='world')render();else if(m.item.kind!=='preg')toast(m.item.text)}
+ else if(m.t==='feed'){if(window.onFeed)window.onFeed(m.item);W.feed.unshift(m.item);W.feed.length=Math.min(W.feed.length,40);if(tab==='world')render();else if(m.item.kind!=='preg')toast(m.item.text)}
  else if(m.t==='players'){PL=m.list;if((tab==='people'&&!viewP)||tab==='chat')render();renderStats()}
  else if(m.t==='msg'){var o=m.m.from===ME.id?m.m.to:m.m.from;(HIST[o]=HIST[o]||[]).push(m.m);
   if(tab==='chat'&&chatWith===o)drawChat();else if(m.m.from!==ME.id){unread[o]=(unread[o]||0)+1;toast('💬 '+(m.fromName||'')+': '+m.m.text);dots()}}
@@ -90,22 +115,23 @@ function on(m){
  else if(m.t==='err')toast('⚠️ '+m.text);
  else if(m.t==='profile')showProfile(m);
  else if(m.t==='rtc')rtc(m);
+ else if(m.t==='poses'){if(window.onPoses)window.onPoses(m.list)}
 }
 function dots(){var n=0;for(var k in unread)n+=unread[k];$('dC').style.display=n?'block':'none';$('dC').textContent=n}
-function signup(){$('nav').style.display='none';$('stats').style.display='none';
+function signup(){$('nav').style.display='none';$('stats').style.display='none';setPanel(true);setTimeout(fitPanel,0);
  $('app').innerHTML='<h1>🌧️ ज़िंदगी ऑनलाइन</h1><p class="small" style="text-align:center">एक साझा दुनिया जहाँ असली लोग जीते हैं</p><div class="card"><h2>तुम्हारा नाम?</h2><input id="nm" maxlength="20" placeholder="नाम लिखो"><h2 style="margin-top:14px">लिंग</h2><div class="g3"><button class="btn alt" data-g="m">👦 लड़का</button><button class="btn alt" data-g="f">👧 लड़की</button><button class="btn alt sel" data-g="r">🎲 कोई भी</button></div><p class="small" style="margin-top:10px">⏳ जन्म से पहले माँ के गर्भ में 9 महीने (असली 3 दिन) इंतज़ार करना होगा।</p><button class="btn c" id="go">गर्भ में आओ 🤰</button></div>';
  document.querySelectorAll('[data-g]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-g]').forEach(function(x){x.classList.remove('sel')});b.classList.add('sel');gsel=b.dataset.g}});
  $('go').onclick=function(){var n=$('nm').value.trim();if(!n)return toast('नाम लिखो');S({t:'signup',name:n,g:gsel})};
 }
 function bar(l,v,c){return '<div class="st">'+l+' <b>'+v+'</b><div class="bar"><i style="width:'+v+'%;background:'+c+'"></i></div></div>'}
-function renderStats(){var st=$('stats');if(!ME){st.style.display='none';return}st.style.display='block';
+function renderStats(){setTimeout(fitPanel,0);var st=$('stats');if(!ME){st.style.display='none';return}st.style.display='block';
  var top='<div class="srow"><span>'+esc(ME.name)+' '+(ME.g==='m'?'👦':'👧')+'</span><span class="pill g">🟢 '+(W.active||0)+' सक्रिय</span><span class="pill o">🌍 वर्ष '+(W.year||1)+' · दिन '+(W.day||0)+'</span></div>';
  var L=ME.life;if(!L){st.innerHTML=top;return}
  var mp=Math.max(2,Math.min(100,Math.round(Math.log10(Math.max(1,L.money))*14)));
  st.innerHTML=top+'<div class="srow"><span class="small">जीवन-वर्ष '+L.gameYear+'/5</span><span class="pill">उम्र: '+L.age+' साल</span></div><div class="grid"><div class="st">💰 पैसा <b'+(L.money<0?' style="color:#c0392b"':'')+'>₹'+fmt(L.money)+'</b><div class="bar"><i style="width:'+(L.money<=0?0:mp)+'%;background:#f2b134"></i></div></div>'+bar('❤️ सेहत',L.h,L.h<30?'#e74c3c':'#2ecc71')+bar('😊 खुशी',L.j,'#5b9cff')+bar('🤝 रिश्ते',L.r,'#c86bfa')+'</div>'}
 function fxHtml(d){if(!d)return '';var a=[];if(d[0])a.push('<span class="'+(d[0]>0?'p':'n')+'">'+(d[0]>0?'+':'-')+'₹'+fmt(Math.abs(d[0]))+'</span>');var n=['','सेहत','खुशी','रिश्ते'];for(var i=1;i<4;i++)if(d[i])a.push('<span class="'+(d[i]>0?'p':'n')+'">'+(d[i]>0?'+':'')+d[i]+' '+n[i]+'</span>');return a.length?'<div class="fx">'+a.join('')+'</div>':''}
-function render(){if(!ME)return;viewP=false;renderStats();clearInterval(waitT);
- document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
+function render(){if(!ME)return;viewP=false;renderStats();clearInterval(waitT);setTimeout(function(){if(ZONE&&tab==='life'&&ME.state==='alive'){var a=$('app');if(a&&!$('zoneBanner')){var d=document.createElement('div');d.id='zoneBanner';d.textContent='📍 '+ZONE;a.insertBefore(d,a.firstChild)}}},0);
+ document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',PANEL&&b.dataset.tab===tab)});
  ({life:rLife,world:rWorld,people:rPeople,chat:rChat})[tab]()}
 function rLife(){var h='';
  if(ME.state==='preg'){var p=ME.preg,skew=Date.now()-p.now,tot=p.end-p.start;
@@ -142,7 +168,7 @@ function rPeople(){var h='';
  bind('data-fa',function(id){S({t:'friendResp',from:id,ok:true})});bind('data-fd',function(id){S({t:'friendResp',from:id,ok:false})});
  bind('data-pr',function(id){S({t:'profile',id:id})});
 }
-function showProfile(m){tab='people';render();viewP=true;var p=m.p,fr=ME.friends.some(function(f){return f.id===p.id});
+function showProfile(m){setPanel(true);ZONE=null;tab='people';render();viewP=true;var p=m.p,fr=ME.friends.some(function(f){return f.id===p.id});
  $('app').innerHTML='<div class="card">'+pRow(p)+'<p class="flags">'+(p.married?'💍 '+esc(p.spouse):'अविवाहित')+' · 👶 '+p.kids+' · 🤝 '+p.friends+' दोस्त · पिछले जीवन: '+p.lives+'</p>'+
  m.lives.map(function(l){return '<div class="li">'+l.age+' साल — '+l.score+'/100 '+esc(l.rating)+'</div>'}).join('')+
  '<button class="btn" id="b_msg">💬 संदेश</button><button class="btn" id="b_call">📞 वॉइस कॉल</button>'+(fr?'':'<button class="btn alt" id="b_fr">🤝 दोस्ती का अनुरोध</button>')+(fr&&!ME.spouse&&!p.married?'<button class="btn alt" id="b_pr">💍 शादी का प्रस्ताव</button>':'')+'<button class="btn alt c" id="b_back">← वापस</button></div>';
@@ -160,7 +186,8 @@ function rChat(){
  $('cb').onclick=function(){chatWith=null;render()};$('cc').onclick=function(){startCall(chatWith,nameOf(chatWith))};
  var sendm=function(){var t=$('ci').value.trim();if(!t)return;S({t:'msg',to:chatWith,text:t});$('ci').value=''};$('cs').onclick=sendm;$('ci').onkeydown=function(e){if(e.key==='Enter')sendm()};drawChat()}
 function drawChat(){var c=$('cl');if(!c)return;c.innerHTML=(HIST[chatWith]||[]).map(function(m){return '<div class="bub'+(m.from===ME.id?' me':'')+'">'+esc(m.text)+'</div>'}).join('');c.scrollTop=c.scrollHeight}
-document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){tab=b.dataset.tab;if(tab!=='chat')chatWith=null;render()}});
+$('pcb').onclick=function(){ZONE=null;setPanel(false)};
+document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){if(b.dataset.city){ZONE=null;setPanel(false);return}ZONE=null;setPanel(true);tab=b.dataset.tab;if(tab!=='chat')chatWith=null;render()}});
 
 /* ---------- WebRTC voice calls (WS signaling) ---------- */
 var C=null; // {peer,name,pc,stream,state,pending:[]}
@@ -194,4 +221,5 @@ function rtc(m){var k=m.kind;
  else if(k==='hangup')endCall(false,'कॉल समाप्त');
 }
 connect();
-</script></body></html>
+</script><script type="module" src="game3d.js"></script>
+</body></html>

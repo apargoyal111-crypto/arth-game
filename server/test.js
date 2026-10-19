@@ -58,6 +58,12 @@ class Cl{constructor(n){this.n=n;this.q=[];this.w=[];this.me=null}
  B.send({t:'rtc',to:A.me.id,kind:'ice',data:{candidate:'candidate:1 1 udp 1 1.2.3.4 5 typ host',sdpMid:'0'}});await A.wait(m=>m.t==='rtc'&&m.kind==='ice');
  A.send({t:'rtc',to:B.me.id,kind:'hangup'});await B.wait(m=>m.t==='rtc'&&m.kind==='hangup');ok(true,'answer/ice/hangup relayed');
  A.send({t:'rtc',to:B.me.id,kind:'evil'});await sleep(100);ok(!B.q.some(m=>m.kind==='evil'),'unknown signaling kind dropped');
+ console.log('5b. 3D position presence');
+ B.clear();A.send({t:'pos',x:12.5,z:-7,ry:1.2});const ps=await B.wait(m=>m.t==='poses'&&m.list.some(p=>p.id===A.me.id&&p.x===12.5),3000).catch(()=>null);
+ ok(!!ps&&ps.list.find(p=>p.id===A.me.id).n===A.me.name,'pos broadcast A -> B with name');
+ await sleep(150);B.clear();A.send({t:'pos',x:9999,z:-9999,ry:'evil'});const pc=await B.wait(m=>m.t==='poses'&&m.list.some(p=>p.id===A.me.id&&p.x===90),3000).catch(()=>null);
+ ok(!!pc&&pc.list.find(p=>p.id===A.me.id).z===-90&&pc.list.find(p=>p.id===A.me.id).ry===0,'pos clamped to map bounds / sanitized');
+ for(let i=0;i<50;i++)A.send({t:'pos',x:i,z:0,ry:0});await sleep(200);A.send({t:'ping'});const pg=await A.wait(m=>m.t==='pong',2000).catch(()=>null);ok(!!pg,'pos spam does not eat the normal rate limit');
  console.log('6. rate limit');
  for(let i=0;i<400;i++)A.send({t:'ping'});const rl=await A.wait(m=>m.t==='err'&&/तेज़/.test(m.text));ok(!!rl,'rate limit triggered');await sleep(1500);
  console.log('7. full lives to death + new life');

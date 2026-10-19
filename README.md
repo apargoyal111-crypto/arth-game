@@ -3,6 +3,14 @@
 एक साझा, हमेशा चलने वाली दुनिया जिसमें असली खिलाड़ी पुणे में जन्म लेते हैं, जीते हैं, दोस्ती-शादी करते हैं, एक-दूसरे को कॉल करते हैं और मरते हैं।
 A shared, always-on Hindi life-simulation world with an authoritative Node.js server.
 
+## 🏙️ 3D शहर / 3D town client (default)
+`/` is now a third-person 3D town built with three.js (bundled locally in `public/vendor/`, so no CDN is needed). The old 2D client is still at **`/classic.html`**.
+- Move with the joystick (left), drag on the right to turn the camera, and hold 🏃 दौड़ to run. On desktop: WASD/arrows, mouse drag, Shift to run.
+- Landmarks: 🏠 घर, 🏫 स्कूल/कॉलेज, 🏢 ऑफ़िस, 🏥 अस्पताल, 🛒 बाज़ार, 🛕 मंदिर, 🌳 पार्क. Walk into a glowing ring to open that year's choice card. The 🏙️ शहर tab closes the panel.
+- Other online players are shown live with name tags. Tap one or walk near them to open their profile (message, friend, propose, call). NPC residents wander the roads (only on your screen).
+- Day/night cycle (1 cycle = 10 world days) and rain during monsoon-flood events.
+- Protocol addition: client sends `{t:'pos',x,z,ry}` (at most ~8/s). The server clamps it to ±`MAP_HALF` (default 90), uses its own limiter separate from the chat rate limit, keeps it in memory only, and broadcasts `{t:'poses',list:[{id,x,z,ry,n,g,a}]}` every 125 ms.
+
 ## 📁 संरचना / Structure
 ```
 online/
@@ -10,7 +18,9 @@ online/
   server/engine.js   Life engine: 71 age-gated events + 13 luck/trouble events
   server/test.js     End-to-end test (3 WebSocket clients)
   server/package.json
-  public/index.html  Single-file mobile client (inline CSS/JS, no external libs)
+  public/index.html  3D client shell (HUD/panels) + public/game3d.js (three.js scene)
+  public/classic.html Original 2D client
+  public/vendor/     three.js r186 (MIT)
 ```
 
 ## ▶️ चलाना / Run locally

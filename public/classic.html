@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="hi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#5b6cff"><title>ज़िंदगी ऑनलाइन</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans Devanagari','Mangal','Nirmala UI',system-ui,sans-serif;background:linear-gradient(180deg,#eef1ff,#f8f4ff);color:#2a2d3e;min-height:100vh;font-size:17px;line-height:1.55;padding-bottom:74px}
+.wrap{max-width:560px;margin:0 auto;padding:0 12px 20px}
+#stats{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.96);box-shadow:0 2px 12px rgba(80,90,180,.12);padding:8px 12px;border-radius:0 0 16px 16px;max-width:560px;margin:0 auto}
+.srow{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:4px;gap:6px}
+.pill{background:#5b6cff;color:#fff;border-radius:20px;padding:2px 10px;font-size:13px;white-space:nowrap}
+.pill.g{background:#e8f8ef;color:#12855a}.pill.o{background:#fff3e0;color:#b26a00}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.st{font-size:13px}.st b{float:right}
+.bar{height:8px;background:#e6e8f3;border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;border-radius:6px;transition:width .6s}
+.card{background:#fff;border-radius:18px;padding:16px;margin-top:14px;box-shadow:0 4px 18px rgba(80,90,180,.10);animation:up .35s ease}
+@keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.rand{background:linear-gradient(135deg,#fff7e0,#ffe9c7);border:2px solid #ffc861}.rand.bad{background:linear-gradient(135deg,#ffecec,#ffdcdc);border-color:#ff8a8a}
+h1{font-size:26px;text-align:center;margin:22px 0 4px;color:#4450d8}h2{font-size:19px;margin-bottom:8px;color:#3b3f9e}
+.btn{display:block;width:100%;min-height:52px;margin-top:10px;padding:12px 14px;font:inherit;font-size:17px;border:none;border-radius:14px;background:#5b6cff;color:#fff;text-align:left;cursor:pointer;box-shadow:0 3px 0 #3d4bd0}
+.btn:active{transform:translateY(2px);box-shadow:0 1px 0 #3d4bd0}.btn:disabled{opacity:.5}
+.btn.alt{background:#eef0ff;color:#3b3f9e;box-shadow:0 3px 0 #c9cdf5}.btn.c{text-align:center}
+.btn.red{background:#e5484d;box-shadow:0 3px 0 #b3343a}.btn.grn{background:#22a565;box-shadow:0 3px 0 #17784a}
+.sm{display:inline-block;width:auto;min-height:48px;padding:8px 14px;font-size:15px;margin:6px 6px 0 0}
+input,textarea{width:100%;font:inherit;padding:12px;border:2px solid #d6d9f5;border-radius:12px;min-height:50px;margin-top:6px}
+.g3{display:flex;gap:8px}.g3 .btn{text-align:center;flex:1}.g3 .btn.sel{background:#2f3bb8;color:#fff}
+.fx{margin-top:10px;font-size:15px;font-weight:700}.fx span{display:inline-block;margin:2px 6px 2px 0;padding:2px 8px;border-radius:10px}
+.fx .p{color:#12855a;background:#e3f7ee}.fx .n{color:#c0392b;background:#fdeaea}
+.li{background:#fff;border-left:4px solid #b7befa;border-radius:8px;padding:6px 10px;margin-bottom:6px;font-size:14px}.li.k{border-color:#ffb547}
+.small{font-size:13px;color:#777}.flags{font-size:13px;color:#555;margin-top:8px}
+.score{font-size:40px;text-align:center;font-weight:800;color:#4450d8}
+.tl div{font-size:14px;padding:4px 0;border-bottom:1px dashed #ddd}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;box-shadow:0 -2px 12px rgba(80,90,180,.15);z-index:6}
+nav button{flex:1;min-height:62px;border:none;background:none;font:inherit;font-size:13px;color:#777;position:relative}
+nav button.on{color:#4450d8;font-weight:700}nav button b{display:block;font-size:22px}
+.dot{position:absolute;top:6px;right:22%;background:#e5484d;color:#fff;border-radius:10px;font-size:11px;padding:0 6px}
+.pl{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee}.pl.sl{opacity:.45}
+.av{width:44px;height:44px;border-radius:50%;background:#eef0ff;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none;position:relative}
+.av i{position:absolute;bottom:0;right:0;width:12px;height:12px;border-radius:50%;border:2px solid #fff;background:#bbb}.av i.on{background:#2ecc71}
+.pl .nm{flex:1;min-width:0}.pl .nm small{display:block;color:#888;font-size:12px}
+.chat{height:52vh;overflow-y:auto;background:#f6f7ff;border-radius:12px;padding:8px;margin-top:8px}
+.bub{max-width:80%;padding:8px 12px;border-radius:14px;margin:4px 0;font-size:15px;background:#fff;word-wrap:break-word}.bub.me{margin-left:auto;background:#5b6cff;color:#fff}
+.row{display:flex;gap:8px}.row input{flex:1}.row .btn{width:auto;margin-top:6px}
+#toast{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#2a2d3e;color:#fff;padding:10px 16px;border-radius:12px;z-index:20;font-size:15px;display:none;max-width:90%}
+#conn{position:fixed;top:0;left:0;right:0;background:#e5484d;color:#fff;text-align:center;font-size:13px;padding:3px;z-index:21;display:none}
+#call{position:fixed;inset:0;background:linear-gradient(160deg,#3b3f9e,#5b6cff);color:#fff;z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+#call .big{font-size:72px}#call .btn{max-width:320px}
+.belly{font-size:90px;text-align:center;animation:beat 1.6s infinite}@keyframes beat{50%{transform:scale(1.07)}}
+.months{display:flex;gap:4px;margin:12px 0}.months span{flex:1;height:10px;border-radius:5px;background:#e6e8f3}.months span.on{background:#f48fb1}
+.feed .li{border-color:#9be3c0}
+</style></head><body>
+<div id="conn">🔌 कनेक्शन टूटा — फिर से जोड़ रहे हैं…</div><div id="toast"></div>
+<div id="stats" style="display:none"></div>
+<div class="wrap" id="app"><h1>🌧️ ज़िंदगी ऑनलाइन</h1><p class="small" style="text-align:center">सर्वर से जुड़ रहे हैं…</p></div>
+<nav id="nav" style="display:none">
+ <button data-tab="life" class="on"><b>🧬</b>जीवन</button><button data-tab="world"><b>🌍</b>दुनिया</button>
+ <button data-tab="people"><b>👥</b>लोग<span class="dot" id="dP" style="display:none"></span></button><button data-tab="chat"><b>💬</b>संदेश<span class="dot" id="dC" style="display:none"></span></button>
+</nav>
+<div id="call"></div>
+<audio id="remote" autoplay playsinline></audio>
+<script>
+"use strict";
+var viewP=false,ws=null,ME=null,W={feed:[]},PL=[],TOK=null,ICE=[{urls:'stun:stun.l.google.com:19302'}],tab='life',chatWith=null,HIST={},unread={},gsel='r',retry=0,waitT=null,lastMeAt=0;
+try{var q=new URLSearchParams(location.search).get('token');if(q)localStorage.setItem('zt',q);TOK=localStorage.getItem('zt')}catch(e){}
+try{var q0=new URLSearchParams(location.search).get('admin');if(q0){localStorage.setItem('zadmin',q0);history.replaceState(null,'',location.pathname)}}catch(e){}
+function $(i){return document.getElementById(i)}
+function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function fmt(n){n=Math.round(n||0);var neg=n<0;n=Math.abs(n);var s=String(n),l=s.slice(-3),r=s.slice(0,-3);if(r)l=r.replace(/\B(?=(\d{2})+(?!\d))/g,',')+','+l;return (neg?'-':'')+l}
+function toast(t){var e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(function(){e.style.display='none'},3200)}
+function S(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
+function connect(){
+ ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host);
+ ws.onopen=function(){retry=0;$('conn').style.display='none';if(TOK)S({t:'hello',token:TOK});else signup()};
+ ws.onclose=function(){$('conn').style.display='block';setTimeout(connect,Math.min(10000,1000*Math.pow(2,retry++)))};
+ ws.onmessage=function(e){var m;try{m=JSON.parse(e.data)}catch(x){return}on(m)};
+}
+setInterval(function(){S({t:'ping'})},20000);
+function on(m){
+ if(m.t==='auth'){TOK=m.token;try{localStorage.setItem('zt',TOK)}catch(e){}ICE=m.ice||ICE;$('nav').style.display='flex';try{var ak=localStorage.getItem('zadmin');if(ak)S({t:'admin',key:ak})}catch(e){}}
+ else if(m.t==='auth_fail'){TOK=null;try{localStorage.removeItem('zt')}catch(e){}signup()}
+ else if(m.t==='me'){ME=m;lastMeAt=Date.now();var n=(m.friendReq.length+m.proposals.length);$('dP').style.display=n?'block':'none';$('dP').textContent=n;if(tab==='life'||(tab==='people'&&!viewP))render();else renderStats()}
+ else if(m.t==='world'){W=m.w;if(tab==='world')render();renderStats()}
+ else if(m.t==='tick'){W.day=m.day;W.year=m.year;W.active=m.active;W.births=m.births;W.deaths=m.deaths;renderStats();if(tab==='world'){var x=$('wclock');if(x)x.innerHTML=clockHtml()}}
+ else if(m.t==='feed'){W.feed.unshift(m.item);W.feed.length=Math.min(W.feed.length,40);if(tab==='world')render();else if(m.item.kind!=='preg')toast(m.item.text)}
+ else if(m.t==='players'){PL=m.list;if((tab==='people'&&!viewP)||tab==='chat')render();renderStats()}
+ else if(m.t==='msg'){var o=m.m.from===ME.id?m.m.to:m.m.from;(HIST[o]=HIST[o]||[]).push(m.m);
+  if(tab==='chat'&&chatWith===o)drawChat();else if(m.m.from!==ME.id){unread[o]=(unread[o]||0)+1;toast('💬 '+(m.fromName||'')+': '+m.m.text);dots()}}
+ else if(m.t==='hist'){HIST[m.with]=m.msgs;if(chatWith===m.with)drawChat()}
+ else if(m.t==='notif')toast(m.text);
+ else if(m.t==='err')toast('⚠️ '+m.text);
+ else if(m.t==='profile')showProfile(m);
+ else if(m.t==='rtc')rtc(m);
+}
+function dots(){var n=0;for(var k in unread)n+=unread[k];$('dC').style.display=n?'block':'none';$('dC').textContent=n}
+function signup(){$('nav').style.display='none';$('stats').style.display='none';
+ $('app').innerHTML='<h1>🌧️ ज़िंदगी ऑनलाइन</h1><p class="small" style="text-align:center">एक साझा दुनिया जहाँ असली लोग जीते हैं</p><div class="card"><h2>तुम्हारा नाम?</h2><input id="nm" maxlength="20" placeholder="नाम लिखो"><h2 style="margin-top:14px">लिंग</h2><div class="g3"><button class="btn alt" data-g="m">👦 लड़का</button><button class="btn alt" data-g="f">👧 लड़की</button><button class="btn alt sel" data-g="r">🎲 कोई भी</button></div><p class="small" style="margin-top:10px">⏳ जन्म से पहले माँ के गर्भ में 9 महीने (असली 3 दिन) इंतज़ार करना होगा।</p><button class="btn c" id="go">गर्भ में आओ 🤰</button></div>';
+ document.querySelectorAll('[data-g]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-g]').forEach(function(x){x.classList.remove('sel')});b.classList.add('sel');gsel=b.dataset.g}});
+ $('go').onclick=function(){var n=$('nm').value.trim();if(!n)return toast('नाम लिखो');S({t:'signup',name:n,g:gsel})};
+}
+function bar(l,v,c){return '<div class="st">'+l+' <b>'+v+'</b><div class="bar"><i style="width:'+v+'%;background:'+c+'"></i></div></div>'}
+function renderStats(){var st=$('stats');if(!ME){st.style.display='none';return}st.style.display='block';
+ var top='<div class="srow"><span>'+esc(ME.name)+' '+(ME.g==='m'?'👦':'👧')+'</span><span class="pill g">🟢 '+(W.active||0)+' सक्रिय</span><span class="pill o">🌍 वर्ष '+(W.year||1)+' · दिन '+(W.day||0)+'</span></div>';
+ var L=ME.life;if(!L){st.innerHTML=top;return}
+ var mp=Math.max(2,Math.min(100,Math.round(Math.log10(Math.max(1,L.money))*14)));
+ st.innerHTML=top+'<div class="srow"><span class="small">जीवन-वर्ष '+L.gameYear+'/5</span><span class="pill">उम्र: '+L.age+' साल</span></div><div class="grid"><div class="st">💰 पैसा <b'+(L.money<0?' style="color:#c0392b"':'')+'>₹'+fmt(L.money)+'</b><div class="bar"><i style="width:'+(L.money<=0?0:mp)+'%;background:#f2b134"></i></div></div>'+bar('❤️ सेहत',L.h,L.h<30?'#e74c3c':'#2ecc71')+bar('😊 खुशी',L.j,'#5b9cff')+bar('🤝 रिश्ते',L.r,'#c86bfa')+'</div>'}
+function fxHtml(d){if(!d)return '';var a=[];if(d[0])a.push('<span class="'+(d[0]>0?'p':'n')+'">'+(d[0]>0?'+':'-')+'₹'+fmt(Math.abs(d[0]))+'</span>');var n=['','सेहत','खुशी','रिश्ते'];for(var i=1;i<4;i++)if(d[i])a.push('<span class="'+(d[i]>0?'p':'n')+'">'+(d[i]>0?'+':'')+d[i]+' '+n[i]+'</span>');return a.length?'<div class="fx">'+a.join('')+'</div>':''}
+function render(){if(!ME)return;viewP=false;renderStats();clearInterval(waitT);
+ document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
+ ({life:rLife,world:rWorld,people:rPeople,chat:rChat})[tab]()}
+function rLife(){var h='';
+ if(ME.state==='preg'){var p=ME.preg,skew=Date.now()-p.now,tot=p.end-p.start;
+  var ms='';for(var i=1;i<=9;i++)ms+='<span class="'+(i<=p.month?'on':'')+'"></span>';
+  h='<div class="card" style="text-align:center"><div class="belly">🤰</div><h2>गर्भ में — महीना '+p.month+'/9</h2><p>पुणे में बरसात का मौसम आने वाला है। माँ अंजलि स्कूल में पढ़ाते हुए तुम्हारी धड़कन महसूस करती हैं, पापा राकेश दुकान से लौटकर लोरी गुनगुनाते हैं।</p><div class="months">'+ms+'</div><p class="small">जन्म में बाकी: <b id="cd"></b></p><p class="small">(हर महीना ≈ '+Math.round(tot/9/3600000*10)/10+' घंटे · सर्वर पर समय चलता रहता है, ऐप बंद करने पर भी)</p></div>'+lastLives();
+  $('app').innerHTML=h;var tick=function(){var r=Math.max(0,p.end-(Date.now()-skew));var s=Math.floor(r/1000);$('cd')&&($('cd').textContent=Math.floor(s/3600)+'घं '+Math.floor(s%3600/60)+'मि '+s%60+'से')};tick();waitT=setInterval(tick,1000);return}
+ if(ME.state==='dead'){var x=ME.summary||{};h='<h1>🕯️ जीवन समाप्त</h1><div class="card"><h2>'+esc(x.name)+'</h2><p>उम्र: <b>'+x.age+' साल</b><br>कारण: '+esc(x.cause)+'<br>शिक्षा: '+esc(x.edu)+'<br>करियर: '+esc(x.job)+'<br>परिवार: '+(x.married?'जीवनसाथी '+esc(x.partner):'अकेले')+', '+x.kids+' बच्चे<br>घर: '+(x.house?'अपना':'किराये का')+'<br>संपत्ति: <b>₹'+fmt(x.wealth)+'</b></p><div class="score">'+x.score+'/100</div><p style="text-align:center;font-weight:700">'+esc(x.rating)+'</p></div><div class="card"><h2>✨ झलकियाँ</h2><div class="tl">'+(x.hl||[]).map(function(e){return '<div><b>'+e.a+':</b> '+esc(e.t)+'</div>'}).join('')+'</div></div><button class="btn c" id="nl">🔄 नया जीवन (फिर 3 दिन का गर्भ)</button>';
+  $('app').innerHTML=h;$('nl').onclick=function(){S({t:'newlife'})};return}
+ var L=ME.life;
+ if(L.res)h+='<div class="card"><b>✔ '+esc(L.res.choice)+'</b>'+(L.res.msg?'<p>'+esc(L.res.msg)+'</p>':'')+fxHtml(L.res.d)+'<button class="btn c" id="nx">अगला साल ➜</button><p class="small" id="wt" style="text-align:center"></p></div>';
+ else if(L.ev){if(L.rnd)h+='<div class="card rand'+(L.rnd.g?'':' bad')+'"><b>'+(L.rnd.g?'🍀 किस्मत!':'⚠️ मुसीबत!')+'</b><p>'+esc(L.rnd.t)+' '+esc(L.rnd.m||'')+'</p>'+fxHtml(L.rnd.d)+'</div>';
+  h+='<div class="card"><h2>'+(L.age<5?'👶 0-4 साल':'📅 '+L.age+' साल')+'</h2><p>'+esc(L.ev.t)+'</p>'+L.ev.o.map(function(o,i){return '<button class="btn" data-i="'+i+'">'+esc(o)+'</button>'}).join('')+'</div>'}
+ var f=['🎓 '+esc(L.edu)];if(L.job)f.push('💼 '+esc(L.job)+(L.inc?' (₹'+fmt(L.inc)+'/साल)':''));if(L.married)f.push('💍 '+esc(L.partner)+(ME.spouse?' (खिलाड़ी)':''));if(L.kids)f.push('👶 '+L.kids);if(L.house)f.push('🏠');if(L.car)f.push('🚗');if(L.loan)f.push('🧾 कर्ज़ ₹'+fmt(L.loan));
+ h+='<div class="flags">'+f.join(' · ')+'</div>';
+ if(ME.spouse)h+='<button class="btn alt c" id="kid">👶 जीवनसाथी के साथ बच्चा</button>';
+ h+='<div style="margin-top:16px"><h3 class="small">📖 जीवन की कहानी</h3>'+L.log.map(function(l){return '<div class="li'+(l.k?' k':'')+'"><b>'+l.a+':</b> '+esc(l.t)+(l.m?' — <span class="small">'+esc(l.m)+'</span>':'')+'</div>'}).join('')+'</div>';
+ $('app').innerHTML=h;
+ document.querySelectorAll('[data-i]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-i]').forEach(function(x){x.disabled=true});S({t:'choose',i:+b.dataset.i})}});
+ if($('kid'))$('kid').onclick=function(){S({t:'kid'})};
+ if($('nx')){var tk=function(){var rem=Math.max(0,(ME.wait||0)-(Date.now()-lastMeAt));$('nx').disabled=rem>0;$('wt').textContent=rem>0?'⏳ अगला साल '+Math.ceil(rem/1000)+' सेकंड में (सिर्फ ऑनलाइन रहने पर समय चलता है)':''};tk();waitT=setInterval(tk,500);
+  $('nx').onclick=function(){$('nx').disabled=true;S({t:'next'})}}
+}
+function lastLives(){if(!ME.lives||!ME.lives.length)return '';return '<div class="card"><h2>पिछले जीवन</h2>'+ME.lives.map(function(l){return '<div class="li">'+esc(l.name)+' — '+l.age+' साल, '+l.score+'/100 '+esc(l.rating)+'</div>'}).join('')+'</div>'}
+function clockHtml(){return '🌍 विश्व वर्ष <b>'+W.year+'</b>, दिन <b>'+W.day+'</b>/360<br>🟢 सक्रिय खिलाड़ी: <b>'+W.active+'</b> · 👶 जन्म: <b>'+W.births+'</b> · 🕯️ मृत्यु: <b>'+W.deaths+'</b>'}
+function rWorld(){$('app').innerHTML='<div class="card"><h2>🌍 पुणे की दुनिया</h2><p id="wclock">'+clockHtml()+'</p><p class="small">दुनिया हमेशा चलती रहती है — त्योहार, बाढ़, बाज़ार, चुनाव सब पर असर डालते हैं।</p></div><div class="card feed"><h2>📰 लाइव खबरें</h2>'+(W.feed||[]).map(function(f){return '<div class="li"><span class="small">व.'+f.year+' दि.'+f.day+'</span> '+esc(f.text)+'</div>'}).join('')+'</div>'}
+function pRow(p,extra){return '<div class="pl'+(p.online?'':' sl')+'"><div class="av">'+(p.g==='m'?'👦':'👧')+'<i class="'+(p.online?'on':'')+'"></i></div><div class="nm"><b>'+esc(p.name)+'</b><small>'+(p.state==='preg'?'🤰 गर्भ में':p.state==='dead'?'🕯️ अगले जीवन की प्रतीक्षा':p.age+' साल'+(p.job?' · '+esc(p.job):''))+(p.online?' · ऑनलाइन':' · 😴 सो रहे हैं')+'</small></div>'+(extra||'')+'</div>'}
+function rPeople(){var h='';
+ if(ME.proposals.length)h+='<div class="card rand"><h2>💍 शादी के प्रस्ताव</h2>'+ME.proposals.map(function(r){return '<p><b>'+esc(r.name)+'</b></p><button class="btn sm grn" data-pa="'+r.id+'">स्वीकार</button><button class="btn sm red" data-pd="'+r.id+'">अस्वीकार</button>'}).join('')+'</div>';
+ if(ME.friendReq.length)h+='<div class="card"><h2>🤝 दोस्ती के अनुरोध</h2>'+ME.friendReq.map(function(r){return '<p><b>'+esc(r.name)+'</b></p><button class="btn sm grn" data-fa="'+r.id+'">स्वीकार</button><button class="btn sm alt" data-fd="'+r.id+'">मना</button>'}).join('')+'</div>';
+ h+='<div class="card"><h2>👥 निवासी ('+PL.filter(function(p){return p.online}).length+' ऑनलाइन)</h2>'+PL.filter(function(p){return p.id!==ME.id}).map(function(p){return pRow(p,'<button class="btn sm alt" data-pr="'+p.id+'">देखें</button>')}).join('')+(PL.length<2?'<p class="small">अभी और कोई नहीं — दोस्त को लिंक भेजो!</p>':'')+'</div>';
+ $('app').innerHTML=h;
+ var bind=function(sel,fn){document.querySelectorAll('['+sel+']').forEach(function(b){b.onclick=function(){fn(b.getAttribute(sel))}})};
+ bind('data-pa',function(id){S({t:'proposeResp',from:id,ok:true})});bind('data-pd',function(id){S({t:'proposeResp',from:id,ok:false})});
+ bind('data-fa',function(id){S({t:'friendResp',from:id,ok:true})});bind('data-fd',function(id){S({t:'friendResp',from:id,ok:false})});
+ bind('data-pr',function(id){S({t:'profile',id:id})});
+}
+function showProfile(m){tab='people';render();viewP=true;var p=m.p,fr=ME.friends.some(function(f){return f.id===p.id});
+ $('app').innerHTML='<div class="card">'+pRow(p)+'<p class="flags">'+(p.married?'💍 '+esc(p.spouse):'अविवाहित')+' · 👶 '+p.kids+' · 🤝 '+p.friends+' दोस्त · पिछले जीवन: '+p.lives+'</p>'+
+ m.lives.map(function(l){return '<div class="li">'+l.age+' साल — '+l.score+'/100 '+esc(l.rating)+'</div>'}).join('')+
+ '<button class="btn" id="b_msg">💬 संदेश</button><button class="btn" id="b_call">📞 वॉइस कॉल</button>'+(fr?'':'<button class="btn alt" id="b_fr">🤝 दोस्ती का अनुरोध</button>')+(fr&&!ME.spouse&&!p.married?'<button class="btn alt" id="b_pr">💍 शादी का प्रस्ताव</button>':'')+'<button class="btn alt c" id="b_back">← वापस</button></div>';
+ $('b_msg').onclick=function(){openChat(p.id)};$('b_call').onclick=function(){startCall(p.id,p.name)};$('b_back').onclick=render;
+ if($('b_fr'))$('b_fr').onclick=function(){S({t:'friend',to:p.id})};if($('b_pr'))$('b_pr').onclick=function(){S({t:'propose',to:p.id})};
+}
+function openChat(id){chatWith=id;tab='chat';unread[id]=0;dots();S({t:'hist',with:id});render()}
+function nameOf(id){var p=PL.filter(function(x){return x.id===id})[0];return p?p.name:'?'}
+function rChat(){
+ if(!chatWith){var ids={};ME.friends.forEach(function(f){ids[f.id]=1});for(var k in HIST)ids[k]=1;for(var u in unread)ids[u]=1;
+  var list=PL.filter(function(p){return ids[p.id]&&p.id!==ME.id});
+  $('app').innerHTML='<div class="card"><h2>💬 बातचीत</h2>'+(list.length?list.map(function(p){return pRow(p,'<button class="btn sm" data-ch="'+p.id+'">खोलें'+(unread[p.id]?' ('+unread[p.id]+')':'')+'</button>')}).join(''):'<p class="small">किसी निवासी की प्रोफ़ाइल से संदेश भेजो।</p>')+'</div>';
+  document.querySelectorAll('[data-ch]').forEach(function(b){b.onclick=function(){openChat(b.dataset.ch)}});return}
+ $('app').innerHTML='<div class="card"><div class="srow"><b>'+esc(nameOf(chatWith))+'</b><span><button class="btn sm" id="cc">📞</button><button class="btn sm alt" id="cb">←</button></span></div><div class="chat" id="cl"></div><div class="row"><input id="ci" maxlength="500" placeholder="संदेश लिखो…"><button class="btn" id="cs">भेजो</button></div></div>';
+ $('cb').onclick=function(){chatWith=null;render()};$('cc').onclick=function(){startCall(chatWith,nameOf(chatWith))};
+ var sendm=function(){var t=$('ci').value.trim();if(!t)return;S({t:'msg',to:chatWith,text:t});$('ci').value=''};$('cs').onclick=sendm;$('ci').onkeydown=function(e){if(e.key==='Enter')sendm()};drawChat()}
+function drawChat(){var c=$('cl');if(!c)return;c.innerHTML=(HIST[chatWith]||[]).map(function(m){return '<div class="bub'+(m.from===ME.id?' me':'')+'">'+esc(m.text)+'</div>'}).join('');c.scrollTop=c.scrollHeight}
+document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){tab=b.dataset.tab;if(tab!=='chat')chatWith=null;render()}});
+
+/* ---------- WebRTC voice calls (WS signaling) ---------- */
+var C=null; // {peer,name,pc,stream,state,pending:[]}
+function callUI(html){var e=$('call');if(!html){e.style.display='none';return}e.innerHTML=html;e.style.display='flex'}
+function endCall(sendHang,msg){if(C){if(sendHang)S({t:'rtc',to:C.peer,kind:'hangup'});try{C.pc&&C.pc.close()}catch(e){}if(C.stream)C.stream.getTracks().forEach(function(t){t.stop()})}C=null;callUI(null);if(msg)toast(msg)}
+function getMic(){if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return Promise.reject(new Error('माइक के लिए HTTPS ज़रूरी है'));return navigator.mediaDevices.getUserMedia({audio:true,video:false})}
+function mkPC(){var pc=new RTCPeerConnection({iceServers:ICE});
+ pc.onicecandidate=function(e){if(e.candidate&&C)S({t:'rtc',to:C.peer,kind:'ice',data:e.candidate})};
+ pc.ontrack=function(e){$('remote').srcObject=e.streams[0]};
+ pc.onconnectionstatechange=function(){if(!C)return;if(pc.connectionState==='connected')inCallUI();if(pc.connectionState==='failed')endCall(true,'कॉल नहीं जुड़ पाई (नेटवर्क/TURN)')};
+ C.stream.getTracks().forEach(function(t){pc.addTrack(t,C.stream)});return pc}
+function inCallUI(){callUI('<div class="big">🎙️</div><h2 style="color:#fff">'+esc(C.name)+'</h2><p>कॉल जुड़ी हुई है</p><button class="btn alt c" id="mu">🔇 म्यूट</button><button class="btn red c" id="hu">📴 कॉल काटें</button>');
+ $('hu').onclick=function(){endCall(true)};$('mu').onclick=function(){var t=C.stream.getAudioTracks()[0];t.enabled=!t.enabled;$('mu').textContent=t.enabled?'🔇 म्यूट':'🔊 अनम्यूट'}}
+function startCall(id,name){if(C)return toast('पहले से कॉल चल रही है');C={peer:id,name:name,out:true,pending:[]};S({t:'rtc',to:id,kind:'ring'});
+ callUI('<div class="big">📞</div><h2 style="color:#fff">'+esc(name)+'</h2><p>घंटी जा रही है…</p><button class="btn red c" id="hu">रद्द करें</button>');$('hu').onclick=function(){endCall(true)}}
+function addIce(c){if(C.pc&&C.pc.remoteDescription)C.pc.addIceCandidate(c).catch(function(){});else C.pending.push(c)}
+function flushIce(){var p=C.pending;C.pending=[];p.forEach(function(c){C.pc.addIceCandidate(c).catch(function(){})})}
+function rtc(m){var k=m.kind;
+ if(k==='ring'){if(C)return S({t:'rtc',to:m.from,kind:'busy'});C={peer:m.from,name:m.fromName,out:false,pending:[]};
+  callUI('<div class="big">📲</div><h2 style="color:#fff">'+esc(m.fromName)+'</h2><p>आपको कॉल कर रहे हैं…</p><button class="btn grn c" id="ac">✅ उठाएँ</button><button class="btn red c" id="dc">❌ मना करें</button>');
+  $('ac').onclick=function(){getMic().then(function(s){if(!C)return;C.stream=s;C.pc=mkPC();S({t:'rtc',to:C.peer,kind:'accept'});callUI('<div class="big">⏳</div><p>जोड़ रहे हैं…</p><button class="btn red c" id="hu">📴</button>');$('hu').onclick=function(){endCall(true)}}).catch(function(e){S({t:'rtc',to:C.peer,kind:'decline'});endCall(false,'माइक अनुमति नहीं मिली: '+e.message)})};
+  $('dc').onclick=function(){S({t:'rtc',to:C.peer,kind:'decline'});endCall(false)};return}
+ if(!C||m.from!==C.peer)return;
+ if(k==='accept'&&C.out){getMic().then(function(s){C.stream=s;C.pc=mkPC();return C.pc.createOffer()}).then(function(o){return C.pc.setLocalDescription(o).then(function(){S({t:'rtc',to:C.peer,kind:'offer',data:o})})}).catch(function(e){endCall(true,'माइक अनुमति नहीं मिली: '+e.message)})}
+ else if(k==='offer'&&C.pc){C.pc.setRemoteDescription(m.data).then(function(){flushIce();return C.pc.createAnswer()}).then(function(a){return C.pc.setLocalDescription(a).then(function(){S({t:'rtc',to:C.peer,kind:'answer',data:a})})}).catch(function(){endCall(true,'कॉल त्रुटि')})}
+ else if(k==='answer'&&C.pc){C.pc.setRemoteDescription(m.data).then(flushIce).catch(function(){})}
+ else if(k==='ice')addIce(m.data);
+ else if(k==='decline')endCall(false,'कॉल अस्वीकार की गई');
+ else if(k==='busy')endCall(false,'व्यस्त हैं');
+ else if(k==='unavailable')endCall(false,'वो अभी ऑनलाइन नहीं हैं (सो रहे हैं)');
+ else if(k==='hangup')endCall(false,'कॉल समाप्त');
+}
+connect();
+</script></body></html>

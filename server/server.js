@@ -149,6 +149,16 @@ function divorce(p){const s=db.players[p.spouse];p.spouse=null;if(s){s.spouse=nu
 function err(p,text){send(socks.get(p.id),{t:'err',text})}
 function notif(p,text){send(socks.get(p.id),{t:'notif',text})}
 
+// ---------- live positions (3D presence; memory only, never persisted) ----------
+const MAP=Number(env.MAP_HALF)||90;const POS=new Map(); // id -> {x,z,ry,t,ch}
+function onPos(p,m){const t=now(),o=POS.get(p.id);if(o&&t-o.t<90)return; // ~10/s max per player
+ const f=(v,a)=>{v=Number(v);return Number.isFinite(v)?Math.max(-a,Math.min(a,v)):0};
+ POS.set(p.id,{x:Math.round(f(m.x,MAP)*100)/100,z:Math.round(f(m.z,MAP)*100)/100,ry:Math.round(f(m.ry,7)*100)/100,t,ch:true})}
+setInterval(()=>{if(!POS.size)return;let changed=false;const list=[];
+ for(const [id,o] of POS){if(!socks.has(id)){POS.delete(id);continue}const p=db.players[id];if(!p)continue;if(o.ch)changed=true;o.ch=false;
+  list.push({id,x:o.x,z:o.z,ry:o.ry,n:p.name,g:p.g,a:p.life?p.life.age:0})}
+ if(changed||Math.random()<.1)bcast({t:'poses',list});},125).unref();
+
 // ---------- HTTP + WS ----------
 const app=express();app.disable('x-powered-by');
 app.use(express.static(path.join(__dirname,'..','public'),{maxAge:0}));
@@ -158,6 +168,7 @@ const wss=new WebSocketServer({server,maxPayload:32*1024});
 wss.on('connection',ws=>{
  ws.alive=true;ws.on('pong',()=>ws.alive=true);ws.bucket={n:RATE_BURST,t:now()};let me=null;
  ws.on('message',raw=>{
+  if(raw.length<200&&me&&String(raw).indexOf('"pos"')>0){let m;try{m=JSON.parse(raw)}catch(e){return}if(m&&m.t==='pos'){ws.alive=true;return onPos(me,m)}}
   const b=ws.bucket,t=now();b.n=Math.min(RATE_BURST,b.n+(t-b.t)/1000*RATE);b.t=t;if(b.n<1)return send(ws,{t:'err',text:'बहुत तेज़! थोड़ा धीरे।'});b.n--;
   let m;try{m=JSON.parse(raw)}catch(e){return}if(!m||typeof m.t!=='string')return;ws.alive=true;
   try{
