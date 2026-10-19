@@ -63,6 +63,8 @@ body.city #pw{display:none}
 #knob{position:absolute;left:41px;top:41px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.25)}
 #run{position:fixed;right:18px;bottom:96px;width:76px;height:76px;border-radius:50%;border:none;background:rgba(91,108,255,.85);color:#fff;font:inherit;font-weight:700;font-size:15px;z-index:5;box-shadow:0 3px 10px rgba(0,0,0,.25)}
 #run.on{background:#e5484d}
+#qb{position:fixed;right:14px;top:206px;min-height:44px;padding:6px 12px;border:none;border-radius:22px;background:rgba(255,255,255,.85);color:#555;font:inherit;font-size:13px;z-index:5}
+#lookb{position:fixed;right:14px;top:150px;min-height:48px;padding:6px 14px;border:none;border-radius:24px;background:rgba(255,255,255,.9);color:#3b3f9e;font:inherit;font-weight:700;font-size:14px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 #meet{position:fixed;left:50%;transform:translateX(-50%);bottom:200px;z-index:5;display:none;min-height:50px;padding:10px 18px;border:none;border-radius:26px;background:#22a565;color:#fff;font:inherit;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.25)}
 #hint{position:fixed;left:50%;transform:translateX(-50%);top:150px;z-index:5;background:rgba(42,45,62,.82);color:#fff;border-radius:14px;padding:6px 14px;font-size:14px;max-width:88%;text-align:center;pointer-events:none}
 #zoneBanner{display:block;background:#fff3e0;color:#b26a00;border-radius:12px;padding:6px 12px;margin-top:10px;font-weight:700;font-size:15px}
@@ -72,7 +74,7 @@ nav{z-index:8}nav button.city{color:#22a565}
 <div id="stats" style="display:none"></div>
 <canvas id="c3d"></canvas>
 <div id="pw"><div id="pclose"><button id="pcb">✕ शहर में घूमें 🏙️</button></div><div class="wrap" id="app"><h1>🌧️ ज़िंदगी ऑनलाइन</h1><p class="small" style="text-align:center">सर्वर से जुड़ रहे हैं…</p></div></div>
-<div class="ctl" id="joy"><div id="knob"></div></div><button class="ctl" id="run">🏃 दौड़</button><button id="meet"></button><div class="ctl" id="hint"></div>
+<div class="ctl" id="joy"><div id="knob"></div></div><button class="ctl" id="run">🏃 दौड़</button><button class="ctl" id="lookb">👗 लुक</button><button class="ctl" id="qb">⚙️ ऑटो</button><button id="meet"></button><div class="ctl" id="hint"></div>
 <nav id="nav" style="display:none">
  <button data-city="1" class="city"><b>🏙️</b>शहर</button> <button data-tab="life" class="on"><b>🧬</b>जीवन</button><button data-tab="world"><b>🌍</b>दुनिया</button>
  <button data-tab="people"><b>👥</b>लोग<span class="dot" id="dP" style="display:none"></span></button><button data-tab="chat"><b>💬</b>संदेश<span class="dot" id="dC" style="display:none"></span></button>
@@ -121,7 +123,9 @@ function dots(){var n=0;for(var k in unread)n+=unread[k];$('dC').style.display=n
 function signup(){$('nav').style.display='none';$('stats').style.display='none';setPanel(true);setTimeout(fitPanel,0);
  $('app').innerHTML='<h1>🌧️ ज़िंदगी ऑनलाइन</h1><p class="small" style="text-align:center">एक साझा दुनिया जहाँ असली लोग जीते हैं</p><div class="card"><h2>तुम्हारा नाम?</h2><input id="nm" maxlength="20" placeholder="नाम लिखो"><h2 style="margin-top:14px">लिंग</h2><div class="g3"><button class="btn alt" data-g="m">👦 लड़का</button><button class="btn alt" data-g="f">👧 लड़की</button><button class="btn alt sel" data-g="r">🎲 कोई भी</button></div><p class="small" style="margin-top:10px">⏳ जन्म से पहले माँ के गर्भ में 9 महीने (असली 3 दिन) इंतज़ार करना होगा।</p><button class="btn c" id="go">गर्भ में आओ 🤰</button></div>';
  document.querySelectorAll('[data-g]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-g]').forEach(function(x){x.classList.remove('sel')});b.classList.add('sel');gsel=b.dataset.g}});
- $('go').onclick=function(){var n=$('nm').value.trim();if(!n)return toast('नाम लिखो');S({t:'signup',name:n,g:gsel})};
+ $('go').onclick=function(){var n=$('nm').value.trim();if(!n)return toast('नाम लिखो');S({t:'signup',name:n,g:gsel,look:window.__look||'normal'})};
+ var lb=document.createElement('button');lb.className='btn alt c';lb.id='slook';var setLbl=function(){var L=(window.ZLOOKS||{})[window.__look||'normal'];lb.textContent='👗 लुक: '+(L?L.n:'सामान्य')};setLbl();$('go').parentNode.insertBefore(lb,$('go'));
+ lb.onclick=function(){if(window.openLookPicker)window.openLookPicker(window.__look||'normal',function(k){window.__look=k;if(window.ZLOOKS[k].model==='f'){gsel='f'}else if(window.ZLOOKS[k].model==='m'){gsel='m'}document.querySelectorAll('[data-g]').forEach(function(x){x.classList.toggle('sel',x.dataset.g===gsel)});setLbl()})};
 }
 function bar(l,v,c){return '<div class="st">'+l+' <b>'+v+'</b><div class="bar"><i style="width:'+v+'%;background:'+c+'"></i></div></div>'}
 function renderStats(){setTimeout(fitPanel,0);var st=$('stats');if(!ME){st.style.display='none';return}st.style.display='block';
@@ -221,5 +225,8 @@ function rtc(m){var k=m.kind;
  else if(k==='hangup')endCall(false,'कॉल समाप्त');
 }
 connect();
-</script><script type="module" src="game3d.js"></script>
+(function(){var b=document.getElementById('qb'),m={auto:'⚙️ ऑटो',hi:'⚙️ HD',lo:'⚙️ हल्का'},n={auto:'hi',hi:'lo',lo:'auto'},c='auto';try{c=localStorage.getItem('zq')||'auto'}catch(e){}b.textContent=m[c];b.onclick=function(){c=n[c];try{localStorage.setItem('zq',c)}catch(e){}toast('क्वालिटी: '+m[c]+' — पेज फिर से लोड हो रहा है');setTimeout(function(){location.reload()},600)}})();
+document.getElementById('lookb').onclick=function(){if(window.openLookPicker&&ME)window.openLookPicker(ME.look||'normal',function(k){S({t:'setLook',look:k})})};
+</script><script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+<script type="module" src="game3d.js"></script>
 </body></html>

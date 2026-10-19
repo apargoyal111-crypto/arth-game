@@ -11,6 +11,13 @@ A shared, always-on Hindi life-simulation world with an authoritative Node.js se
 - Day/night cycle (1 cycle = 10 world days) and rain during monsoon-flood events.
 - Protocol addition: client sends `{t:'pos',x,z,ry}` (at most ~8/s). The server clamps it to ±`MAP_HALF` (default 90), uses its own limiter separate from the chat rate limit, keeps it in memory only, and broadcasts `{t:'poses',list:[{id,x,z,ry,n,g,a}]}` every 125 ms.
 
+### 👤 Realistic characters & looks
+- Humans are CC0 MakeHuman-based rigged models (Innerscene "Sam" and "Harper") with idle/walk/run clips that crossfade. Materials are PBR (MeshPhysical with skin sheen), skin tone is seeded per player, and everyday clothing colours vary. Sources and licenses: `public/models/LICENSES.md`.
+- Looks (pick at signup or with the 👗 लुक button): सामान्य, the hero **अपारा**, and 10 original heroines (रिया, काव्या, तारा, निशा, मीरा, आन्या, ज़ारा, इरा, सिया, नैना). All are fictional and not based on real people. The server field `look` is whitelisted (`setLook` message) and visible to everyone.
+- ⚙️ quality toggle: ऑटो / HD / हल्का. Low quality lowers the pixel ratio and turns off shadows and clearcoat. Far characters animate less often (LOD).
+- Environment: sky shader with sun/moon/stars, clouds, birds, fireflies, street lamps with night glow, auto-rickshaws and scooters, footpaths, temple shikhara with flags, hospital ambulance, school playground, bazaar stalls, park benches and flowers. Roads look wet in rain. Textures are generated in the browser, so they add no download size.
+- The server gzips responses (`compression`).
+
 ## 📁 संरचना / Structure
 ```
 online/

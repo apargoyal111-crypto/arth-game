@@ -26,6 +26,7 @@ function persist(){if(!dirty)return;dirty=false;fs.mkdirSync(path.dirname(DATA),
 setInterval(()=>{try{persist()}catch(e){console.error('persist',e)}},3000).unref();
 
 // ---------- helpers ----------
+const LOOKS=['normal','apara','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10'];const look=v=>{v=v==='hero'?'apara':v==='heroine'?'h1':v;return LOOKS.includes(v)?v:'normal'}; // original fictional looks only
 const clean=(s,n)=>String(s==null?'':s).replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,n);
 const uid=()=>crypto.randomBytes(6).toString('hex');
 const now=()=>Date.now();
@@ -61,7 +62,7 @@ function worldEvent(){const e=WEV[Math.floor(Math.random()*WEV.length)];
  feed(e.t,e.k)}
 
 // ---------- player model ----------
-function pub(p){return {id:p.id,name:p.name,g:p.g,online:socks.has(p.id),state:p.state,
+function pub(p){return {id:p.id,name:p.name,g:p.g,look:look(p.look),online:socks.has(p.id),state:p.state,
  age:p.life?p.life.age:0,job:p.life?p.life.job:'',married:!!p.spouse,spouse:p.spouse&&db.players[p.spouse]?db.players[p.spouse].name:'',
  kids:p.life?p.life.kids:0,lives:p.lives.length,friends:p.friends.length}}
 function playersList(){return Object.values(db.players).map(pub).sort((a,b)=>b.online-a.online)}
@@ -69,7 +70,7 @@ let plTimer=null;function pushPlayers(){clearTimeout(plTimer);plTimer=setTimeout
 function worldView(){const w=db.world;return {day:w.day,year:w.year,births:w.births,deaths:w.deaths,active:socks.size,
  total:Object.keys(db.players).length,feed:w.feed.slice(0,30),npcs:w.npcs.length}}
 function view(p){
- const v={t:'me',id:p.id,name:p.name,g:p.g,state:p.state,friends:p.friends.map(id=>pub(db.players[id])).filter(x=>x.id),
+ const v={t:'me',id:p.id,name:p.name,g:p.g,look:look(p.look),state:p.state,friends:p.friends.map(id=>pub(db.players[id])).filter(x=>x.id),
   friendReq:p.friendReq.map(id=>({id,name:db.players[id]&&db.players[id].name})),proposals:p.proposals.map(id=>({id,name:db.players[id]&&db.players[id].name})),
   spouse:p.spouse||null,lives:p.lives.slice(-5),turnMs:TURN_MS,activeMs:p.activeMs};
  if(p.state==='preg'){const el=now()-p.pregStart;v.preg={start:p.pregStart,end:p.pregStart+PREG_MS,month:Math.min(9,1+Math.floor(el/(PREG_MS/9))),now:now()}}
@@ -143,6 +144,7 @@ const H={
   const data=m.data===undefined?null:m.data;if(JSON.stringify(data||'').length>20000)return;
   sendTo(to.id,{t:'rtc',from:p.id,fromName:p.name,kind:m.kind,data})},
  profile(p,m){const t=db.players[m.id];if(!t)return;send(socks.get(p.id),{t:'profile',p:pub(t),lives:t.lives.slice(-3).map(l=>({age:l.age,score:l.score,rating:l.rating,cause:l.cause}))})},
+ setLook(p,m){p.look=look(m.look);mark();pushMe(p);pushPlayers()},
  ping(p){send(socks.get(p.id),{t:'pong'})}
 };
 function divorce(p){const s=db.players[p.spouse];p.spouse=null;if(s){s.spouse=null;if(s.life){s.life.married=false;s.life.partner='';s.life.j=E.cl(s.life.j-15)}pushMe(s);feed('💔 '+p.name+' और '+s.name+' का तलाक हो गया।','info')}}
@@ -156,11 +158,14 @@ function onPos(p,m){const t=now(),o=POS.get(p.id);if(o&&t-o.t<90)return; // ~10/
  POS.set(p.id,{x:Math.round(f(m.x,MAP)*100)/100,z:Math.round(f(m.z,MAP)*100)/100,ry:Math.round(f(m.ry,7)*100)/100,t,ch:true})}
 setInterval(()=>{if(!POS.size)return;let changed=false;const list=[];
  for(const [id,o] of POS){if(!socks.has(id)){POS.delete(id);continue}const p=db.players[id];if(!p)continue;if(o.ch)changed=true;o.ch=false;
-  list.push({id,x:o.x,z:o.z,ry:o.ry,n:p.name,g:p.g,a:p.life?p.life.age:0})}
+  list.push({id,x:o.x,z:o.z,ry:o.ry,n:p.name,g:p.g,l:look(p.look),a:p.life?p.life.age:0})}
  if(changed||Math.random()<.1)bcast({t:'poses',list});},125).unref();
 
 // ---------- HTTP + WS ----------
 const app=express();app.disable('x-powered-by');
+app.use(require('compression')()); // gzip text assets (three.js ~2 MB -> ~0.45 MB)
+app.use('/models',express.static(require('path').join(__dirname,'..','public','models'),{maxAge:'7d',immutable:true}));
+app.use('/vendor',express.static(require('path').join(__dirname,'..','public','vendor'),{maxAge:'1d'}));
 app.use(express.static(path.join(__dirname,'..','public'),{maxAge:0}));
 app.get('/health',(q,r)=>r.json({ok:true,players:Object.keys(db.players).length,active:socks.size}));
 const server=http.createServer(app);
@@ -174,7 +179,7 @@ wss.on('connection',ws=>{
   try{
    if(m.t==='signup'){const name=clean(m.name,20);if(!name)return send(ws,{t:'err',text:'नाम ज़रूरी है'});
     const g=m.g==='f'?'f':m.g==='m'?'m':(Math.random()<.5?'m':'f');
-    const p={id:uid(),token:crypto.randomBytes(18).toString('hex'),name,g,created:now(),pregStart:now(),state:'preg',life:null,lives:[],activeMs:0,lastTurnMs:0,friends:[],friendReq:[],proposals:[],spouse:null};
+    const p={id:uid(),token:crypto.randomBytes(18).toString('hex'),name,g,created:now(),pregStart:now(),state:'preg',life:null,lives:[],activeMs:0,lastTurnMs:0,friends:[],friendReq:[],proposals:[],spouse:null,look:look(m.look)};
     db.players[p.id]=p;mark();m={t:'hello',token:p.token};feed('🤰 एक नया जीव पुणे में आने वाला है: '+name,'preg')}
    if(m.t==='hello'){const p=Object.values(db.players).find(x=>x.token===String(m.token||''));if(!p)return send(ws,{t:'auth_fail'});
     const old=socks.get(p.id);if(old&&old!==ws){send(old,{t:'err',text:'दूसरी जगह से लॉगिन हुआ'});old.close()}

@@ -64,6 +64,8 @@ class Cl{constructor(n){this.n=n;this.q=[];this.w=[];this.me=null}
  await sleep(150);B.clear();A.send({t:'pos',x:9999,z:-9999,ry:'evil'});const pc=await B.wait(m=>m.t==='poses'&&m.list.some(p=>p.id===A.me.id&&p.x===90),3000).catch(()=>null);
  ok(!!pc&&pc.list.find(p=>p.id===A.me.id).z===-90&&pc.list.find(p=>p.id===A.me.id).ry===0,'pos clamped to map bounds / sanitized');
  for(let i=0;i<50;i++)A.send({t:'pos',x:i,z:0,ry:0});await sleep(200);A.send({t:'ping'});const pg=await A.wait(m=>m.t==='pong',2000).catch(()=>null);ok(!!pg,'pos spam does not eat the normal rate limit');
+ A.clear();A.send({t:'setLook',look:'h3'});const lk=await A.wait(m=>m.t==='me'&&m.look==='h3',3000).catch(()=>null);ok(!!lk,'look whitelisted value accepted');
+ A.clear();A.send({t:'setLook',look:'<evil>'});const lk2=await A.wait(m=>m.t==='me',3000).catch(()=>null);ok(lk2&&lk2.look==='normal','unknown look rejected -> normal');
  console.log('6. rate limit');
  for(let i=0;i<400;i++)A.send({t:'ping'});const rl=await A.wait(m=>m.t==='err'&&/तेज़/.test(m.text));ok(!!rl,'rate limit triggered');await sleep(1500);
  console.log('7. full lives to death + new life');
