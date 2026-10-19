@@ -77,7 +77,7 @@ function view(p){
   v.life={age:L.age,money:L.money,h:L.h,j:L.j,r:L.r,edu:E.EDU[L.edu],job:L.job,inc:L.inc,married:L.married,partner:L.partner,kids:L.kids,house:L.house,car:L.car,inv:L.inv,loan:L.loan||0,
    gameYear:Math.min(5,1+Math.floor(L.age/20)),log:L.log.slice(0,30),res:L.res,rnd:L.rnd,yd:L.yd};
   if(L.cur){const ev=E.curEv(L);v.life.ev={t:E.txt(ev.t,L),o:ev.o.filter(o=>E.okOpt(o,L)).map(o=>E.txt(o.t,L))}}
-  v.wait=Math.max(0,p.lastTurnMs+TURN_MS-activeNow(p))}
+  v.wait=p.admin?0:Math.max(0,p.lastTurnMs+TURN_MS-activeNow(p))}
  if(p.state==='dead')v.summary=p.lives[p.lives.length-1];
  return v}
 function pushMe(p){sendTo(p.id,view(p))}
@@ -103,11 +103,11 @@ const H={
   if(p.spouse&&!p.life.married){divorce(p)} // engine-driven divorce
   if(p.life.dead)return finishLife(p);mark();pushMe(p)},
  next(p){if(p.state!=='alive'||!p.life||p.life.cur)return;
-  if(activeNow(p)-p.lastTurnMs<TURN_MS)return err(p,'अगला साल अभी नहीं आया — थोड़ा रुको');
+  if(!p.admin&&activeNow(p)-p.lastTurnMs<TURN_MS)return err(p,'अगला साल अभी नहीं आया — थोड़ा रुको');
   p.lastTurnMs=activeNow(p);socialBonus(p);E.nextYear(p.life);
   if(p.spouse&&db.players[p.spouse]){p.life.married=true;p.life.partner=db.players[p.spouse].name}
   if(p.life.dead)return finishLife(p);mark();pushMe(p);pushPlayers()},
- newlife(p){if(p.state!=='dead')return;p.state='preg';p.pregStart=now();mark();pushMe(p);feed('🤰 '+p.name+' एक नए जीवन की प्रतीक्षा में है।','preg')},
+ newlife(p){if(p.state!=='dead')return;p.state='preg';p.pregStart=now();mark();pushMe(p);feed('🤰 '+p.name+' एक नए जीवन की प्रतीक्षा में है।','preg');if(p.admin){startLife(p);pushMe(p);pushPlayers()}},
  msg(p,m){const to=db.players[m.to];const text=clean(m.text,500);if(!to||to.id===p.id||!text)return err(p,'संदेश नहीं भेजा जा सका');
   const k=pkey(p.id,to.id);const arr=db.msgs[k]||(db.msgs[k]=[]);const it={from:p.id,to:to.id,text,ts:now()};arr.push(it);if(arr.length>200)arr.splice(0,arr.length-200);
   // small relationship boost, max once per turn per pair
@@ -170,6 +170,9 @@ wss.on('connection',ws=>{
     me=p;ws.pid=p.id;socks.set(p.id,ws);
     send(ws,{t:'auth',token:p.token,id:p.id,ice:ICE,cfg:{pregMs:PREG_MS,turnMs:TURN_MS,scale:SCALE}});
     pushMe(p);send(ws,{t:'world',w:worldView()});pushPlayers();return}
+   if(m.t==='admin'){const K=String(env.ADMIN_KEY||''),k=String(m.key||'');
+    if(!me||!K||k.length!==K.length||!crypto.timingSafeEqual(Buffer.from(k),Buffer.from(K)))return send(ws,{t:'err',text:'गलत एडमिन कुंजी'});
+    me.admin=true;mark();if(me.state==='preg'){startLife(me);pushPlayers()}pushMe(me);return send(ws,{t:'err',text:'👑 स्पेशल एक्सेस चालू!'})}
    if(!me){if(m.t==='ping')return;return send(ws,{t:'err',text:'पहले लॉगिन करें'})}
    const h=H[m.t];if(h&&Object.prototype.hasOwnProperty.call(H,m.t))h(me,m);
   }catch(e){console.error('handler error',m&&m.t,e);send(ws,{t:'err',text:'सर्वर त्रुटि'})}

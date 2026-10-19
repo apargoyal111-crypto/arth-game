@@ -61,6 +61,7 @@ nav button.on{color:#4450d8;font-weight:700}nav button b{display:block;font-size
 <script>
 "use strict";
 var viewP=false,ws=null,ME=null,W={feed:[]},PL=[],TOK=null,ICE=[{urls:'stun:stun.l.google.com:19302'}],tab='life',chatWith=null,HIST={},unread={},gsel='r',retry=0,waitT=null,lastMeAt=0;
+try{var q0=new URLSearchParams(location.search).get('admin');if(q0){localStorage.setItem('zadmin',q0);history.replaceState(null,'',location.pathname)}}catch(e){}
 try{var q=new URLSearchParams(location.search).get('token');if(q)localStorage.setItem('zt',q);TOK=localStorage.getItem('zt')}catch(e){}
 function $(i){return document.getElementById(i)}
 function esc(t){return String(t==null?'':t).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
@@ -75,7 +76,7 @@ function connect(){
 }
 setInterval(function(){S({t:'ping'})},20000);
 function on(m){
- if(m.t==='auth'){TOK=m.token;try{localStorage.setItem('zt',TOK)}catch(e){}ICE=m.ice||ICE;$('nav').style.display='flex'}
+ if(m.t==='auth'){TOK=m.token;try{localStorage.setItem('zt',TOK)}catch(e){}ICE=m.ice||ICE;$('nav').style.display='flex';try{var ak=localStorage.getItem('zadmin');if(ak)S({t:'admin',key:ak})}catch(e){}}
  else if(m.t==='auth_fail'){TOK=null;try{localStorage.removeItem('zt')}catch(e){}signup()}
  else if(m.t==='me'){ME=m;lastMeAt=Date.now();var n=(m.friendReq.length+m.proposals.length);$('dP').style.display=n?'block':'none';$('dP').textContent=n;if(tab==='life'||(tab==='people'&&!viewP))render();else renderStats()}
  else if(m.t==='world'){W=m.w;if(tab==='world')render();renderStats()}
