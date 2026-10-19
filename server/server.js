@@ -170,7 +170,7 @@ wss.on('connection',ws=>{
     me=p;ws.pid=p.id;socks.set(p.id,ws);
     send(ws,{t:'auth',token:p.token,id:p.id,ice:ICE,cfg:{pregMs:PREG_MS,turnMs:TURN_MS,scale:SCALE}});
     pushMe(p);send(ws,{t:'world',w:worldView()});pushPlayers();return}
-   if(!me)return send(ws,{t:'err',text:'पहले लॉगिन करें'});
+   if(!me){if(m.t==='ping')return;return send(ws,{t:'err',text:'पहले लॉगिन करें'})}
    const h=H[m.t];if(h&&Object.prototype.hasOwnProperty.call(H,m.t))h(me,m);
   }catch(e){console.error('handler error',m&&m.t,e);send(ws,{t:'err',text:'सर्वर त्रुटि'})}
  });
