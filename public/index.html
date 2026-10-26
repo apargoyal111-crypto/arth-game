@@ -285,8 +285,10 @@ addEventListener('load',function(){var b=$('muteB');function u(){b.textContent=S
 function goLandscape(){try{var d=document.documentElement;if(!document.fullscreenElement&&d.requestFullscreen){var pr=d.requestFullscreen({navigationUI:'hide'});if(pr&&pr.then)pr.then(lockO).catch(function(){})}else lockO()}catch(e){}}
 function lockO(){try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){}}
 if(matchMedia('(pointer:coarse)').matches){document.addEventListener('pointerdown',function(e){if(e.target.closest&&e.target.closest('input,textarea'))return;goLandscape()},{passive:true})}
-(function(){var b=document.getElementById('qb'),m={auto:'⚙️ ऑटो',hi:'⚙️ HD',lo:'⚙️ हल्का'},n={auto:'hi',hi:'lo',lo:'auto'},c='auto';try{c=localStorage.getItem('zq')||'auto'}catch(e){}b.textContent=m[c];b.onclick=function(){c=n[c];try{localStorage.setItem('zq',c)}catch(e){}toast('क्वालिटी: '+m[c]+' — पेज फिर से लोड हो रहा है');setTimeout(function(){location.reload()},600)}})();
+(function(){var b=document.getElementById('qb'),m={auto:'⚙️ ऑटो',lo:'⚙️ हल्का',mid:'⚙️ मध्यम',hi:'⚙️ HD',ultra:'⚙️ अल्ट्रा'},n={auto:'lo',lo:'mid',mid:'hi',hi:'ultra',ultra:'auto'},c='auto';try{c=localStorage.getItem('zq')||'auto'}catch(e){}if(!m[c])c='auto';b.textContent=m[c];b.onclick=function(){c=n[c];try{localStorage.setItem('zq',c);localStorage.removeItem('zqa')}catch(e){}toast('क्वालिटी: '+m[c]+' — पेज फिर से लोड हो रहा है');setTimeout(function(){location.reload()},600)}})();
 document.getElementById('lookb').onclick=function(){if(window.openLookPicker&&ME)window.openLookPicker(ME.look||'normal',function(k){S({t:'setLook',look:k})})};
-</script><script src="town.js"></script><script src="audio.js"></script><script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</script><script src="town.js"></script><script src="audio.js"></script><div id="dl" style="position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:30;padding:3px 12px;border-radius:12px;background:rgba(20,22,34,.7);color:#fff;font-size:12px;pointer-events:none;display:none"></div>
+<script>window.onDistrictProgress=function(f){var e=document.getElementById('dl');e.style.display=f>=1?'none':'block';e.textContent='🏙️ शहर की डिटेल लोड हो रही है… '+Math.round(f*100)+'%'};</script>
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/jsm/"}}</script>
 <script type="module" src="game3d.js"></script>
 </body></html>

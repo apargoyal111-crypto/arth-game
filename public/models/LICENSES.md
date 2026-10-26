@@ -24,3 +24,9 @@ Earlier Mixamo-derived models (soldier/michelle/Xbot) were never committed to th
 - Vehicles (car, auto-rickshaw, scooter) are procedural low-poly meshes in code.
 - Window glow, water ripple, contact-shadow and particle textures are canvas-generated.
 - Font: Mukta from Google Fonts (SIL Open Font License 1.1), loaded from fonts.googleapis.com.
+
+## HQ graphics + buildings update
+- `models/cars.glb`: Kenney **Car Kit** (sedan, taxi, suv, van, hatchback-sports, delivery), https://kenney.nl/assets/car-kit. License: **CC0 1.0**. Merged into one file and meshopt-compressed.
+- `tex/*.webp`: textures from **ambientCG** (https://ambientcg.com). License: **CC0 1.0**. Asphalt026C (road), PavingStones130 (pave), Grass004 (grass), Bricks076C (brick), Plaster003 (plaster). Colour maps are 512px; `_n` normal maps (GL) are 256px.
+- `vendor/jsm/postprocessing/*` and `vendor/jsm/shaders/*`: three.js r186 add-ons (EffectComposer, UnrealBloomPass, OutputPass and others). License: **MIT**.
+- Buildings, Hindi signboards, shutters, grills, gates and window and weathering textures are procedural (code plus canvas). Auto-rickshaw and scooter are procedural meshes.
