@@ -384,7 +384,7 @@ function matFor(key,src,L,skin,glamOn,seed,hair,old){const nm=src.name||'';const
 const capG=new THREE.CapsuleGeometry(.25,1.1,3,8);
 const blobT=ctex(64,(x,s)=>{const g=x.createRadialGradient(32,32,2,32,32,30);g.addColorStop(0,'rgba(0,0,0,.55)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,s,s)});
 const blobM=new THREE.MeshBasicMaterial({map:blobT,transparent:true,depthWrite:false}),blobG=new THREE.PlaneGeometry(1.3,1.3).rotateX(-Math.PI/2);
-function makeChar(g,name,look,seed,age,bot){const root=new THREE.Group();root.userData.g=g;const lk=LOOKS[look]?look:'normal';
+function makeChar(g,name,look,seed,age,bot){age=25;const root=new THREE.Group();root.userData.g=g;const lk=LOOKS[look]?look:'normal';
  const o=OUT[g==='f'?'f':'m'][Math.floor(hash(seed+'o')*7)],L=LOOKS[lk];const far=new THREE.Mesh(capG,new THREE.MeshLambertMaterial({color:L.tint||(L.outfit?L.outfit[0]:o[0])}));far.position.y=.85;root.add(far);const blob=new THREE.Mesh(blobG,blobM);blob.position.y=.03;blob.renderOrder=1;root.add(blob);root.userData.blob=blob;
  Object.assign(root.userData,{g,look:lk,seed:seed||name||Math.random(),age:age||25,far,acc:0,bot,fx:{punch:-9,hit:-9,wave:-9,act:-9},sit:0,sitW:0});
  if(name){const t=label(name,bot?'rgba(90,90,110,.82)':g==='f'?'rgba(200,60,130,.85)':'rgba(40,90,190,.85)');t.scale.multiplyScalar(0.42);t.position.y=2.15;t.visible=false;root.add(t);root.userData.tag=t}
@@ -438,7 +438,7 @@ function animClips(ch,u,speed,dt,now,dist){const sp=u.sit?0:speed,fx=u.fx;u.seen
  if(base==='walk'||base==='walkF')a.timeScale=sp<.3?.7:Math.max(.5,Math.min(1.8,sp/1.45));else if(base==='jog')a.timeScale=Math.max(.6,Math.min(1.6,sp/3.4));else if(base==='run')a.timeScale=Math.max(.7,Math.min(1.5,sp/6.2));else a.timeScale=1;
  const ev=(k,f)=>{if(fx[k]>(u.seen[k]||-1)&&now-fx[k]<600){u.seen[k]=fx[k];f()}};
  ev('punch',()=>{u.pc=(u.pc||0)+1;playOne(u,u.pc%3===0?'hook':u.pc%2?'jab':'cross')});ev('hit',()=>playOne(u,Math.random()<.5?'hit':'hitH'));
- ev('wave',()=>playOne(u,'wave',2.2));ev('act',()=>playOne(u,u.role==='kid'?'bat':'yes'));ev('bat',()=>playOne(u,'bat'));ev('talk',()=>playOne(u,'talk',2.6));ev('dance',()=>{u.dance=true});
+ ev('wave',()=>playOne(u,'wave',2.2));ev('act',()=>playOne(u,u.role==='cricket'?'bat':'yes'));ev('bat',()=>playOne(u,'bat'));ev('talk',()=>playOne(u,'talk',2.6));ev('dance',()=>{u.dance=true});
  if(u.one&&now>u.oneEnd){u.one.fadeOut(.2);u.one=null;const b=u.act[u.base];b.enabled=true;b.setEffectiveWeight(1).fadeIn(.2).play()}
  u.model.position.y=u.baseY-(u.sit&&!u.onBench?.42:0);
  u.acc+=dt*(G.__animSlow||1);const every=dist>40?0.1:dist>20?0.033:0;if(u.acc>=every){u.mixer.update(u.acc);u.acc=0}
@@ -506,7 +506,7 @@ function tap(e){v2.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ra
 // ---------- other players + bots ----------
 const others=new Map();
 G.onPoses=list=>{const t=performance.now();for(const p of list){if(G.ME&&p.id===G.ME.id)continue;let o=others.get(p.id);
- if(!o||o.g!==p.g||o.l!==(p.l||'normal')){if(o)scene.remove(o.ch);const ch=makeChar(p.g,p.r?p.n:(p.b?'🤖 ':'')+p.n+' · '+p.a,p.l,p.id,p.a,p.b);ch.userData.pid=p.id;ch.userData.role=p.r;ch.userData.idleK=p.r==='shop'||p.r==='teacher'?'phone':p.r==='elder'?'idle2':(!p.r&&hash(p.id+'i')<.15)?'phone':null;if(p.a<13)ch.scale.setScalar(.68);ch.position.set(p.x,0,p.z);o={ch,r:p.r,g:p.g,l:p.l||'normal',n:p.n,b:p.b,tx:p.x,tz:p.z,ry:p.ry,seen:t,sp:0};others.set(p.id,o)}
+ if(!o||o.g!==p.g||o.l!==(p.l||'normal')){if(o)scene.remove(o.ch);const ch=makeChar(p.g,p.r?p.n:(p.b?'🤖 ':'')+p.n+(p.a?' · Lv '+p.a:''),p.l,p.id,p.a,p.b);ch.userData.pid=p.id;ch.userData.role=p.r;ch.userData.idleK=p.r==='shop'||p.r==='teacher'?'phone':p.r==='elder'?'idle2':(!p.r&&hash(p.id+'i')<.15)?'phone':null;if(p.a<13)ch.scale.setScalar(.68);ch.position.set(p.x,0,p.z);o={ch,r:p.r,g:p.g,l:p.l||'normal',n:p.n,b:p.b,tx:p.x,tz:p.z,ry:p.ry,seen:t,sp:0};others.set(p.id,o)}
  const dt=Math.max(.05,(t-(o.last||t-200))/1000);o.vel=Math.hypot(p.x-o.tx,p.z-o.tz)/dt;o.last=t;
  o.tx=p.x;o.tz=p.z;o.ry=p.ry;o.seen=t;o.ch.userData.sit=p.s?1:0;o.ch.userData.onBench=p.s&&TW.BENCH.some(b=>Math.hypot(b[0]-p.x,b[1]-p.z)<.3)}};
 // ---------- drivable vehicles ----------
@@ -524,8 +524,8 @@ function speak(text,o){try{if(!window.speechSynthesis||localStorage.getItem('zmu
 function closeDlg(){DLG=null;dlgEl.style.display='none'}
 G.onDlg=m=>{if(m.close)return closeDlg();DLG=m;const hearts='❤️'.repeat(Math.min(5,Math.ceil(m.dost/2)))+'🤍'.repeat(5-Math.min(5,Math.ceil(m.dost/2)));
  dlgEl.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px">'+m.name+'</b><span style="font-size:12px">दोस्ती '+hearts+' <button id="dlgx" style="border:none;background:#eee;border-radius:10px;padding:2px 8px;margin-left:6px">✕</button></span></div><div style="margin:4px 0 8px;font-size:15px">'+m.text+'</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+
-  m.chips.map(c=>'<button data-k="'+c.k+'" style="border:none;border-radius:14px;padding:6px 12px;background:#5b6cff;color:#fff;font:600 14px Mukta,sans-serif">'+c.l+'</button>').join('')+'</div>';
- dlgEl.style.display='block';dlgEl.querySelector('#dlgx').onclick=closeDlg;dlgEl.querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>{SND.click&&SND.click();G.S&&G.S({t:'dlg',id:m.id,k:b.dataset.k});if(b.dataset.k==='bye')closeDlg()});
+  m.chips.map(c=>'<button data-k="'+c.k+'" style="border:none;border-radius:14px;padding:6px 12px;background:#5b6cff;color:#fff;font:600 14px Mukta,sans-serif">'+c.l+'</button>').join('')+'</div>'+'<form id="dlgf" style="display:flex;gap:6px;margin-top:8px"><input id="dlgi" maxlength="200" placeholder="कुछ बोलो…" style="flex:1;border:1px solid #ccd;border-radius:14px;padding:6px 10px;font:15px Mukta,sans-serif">'+((window.SpeechRecognition||window.webkitSpeechRecognition)?'<button type="button" id="dlgm" style="border:none;border-radius:14px;padding:6px 10px;background:#eee">🎤</button>':'')+'<button style="border:none;border-radius:14px;padding:6px 12px;background:#22a06b;color:#fff;font:600 14px Mukta">भेजो</button></form>';
+ dlgEl.style.display='block';const fm=dlgEl.querySelector('#dlgf'),ip=dlgEl.querySelector('#dlgi');fm.onsubmit=e=>{e.preventDefault();const v=ip.value.trim();if(!v)return;G.S&&G.S({t:'say',id:m.id,text:v});ip.value='';ip.placeholder='…';};const mic=dlgEl.querySelector('#dlgm');if(mic)mic.onclick=()=>{try{const R=new (window.SpeechRecognition||window.webkitSpeechRecognition)();R.lang='hi-IN';R.onresult=e=>{ip.value=e.results[0][0].transcript;fm.requestSubmit()};R.start();mic.textContent='🔴'}catch(e){}};dlgEl.querySelector('#dlgx').onclick=closeDlg;dlgEl.querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>{SND.click&&SND.click();G.S&&G.S({t:'dlg',id:m.id,k:b.dataset.k});if(b.dataset.k==='bye')closeDlg()});
  const o=others.get(m.id);speak(m.text,o);if(o)floatText('💬 '+m.text.slice(0,60),o.ch,'rgba(30,32,48,.88)',3500)};
 G.onWanted=m=>{WANTED=m.n;wantEl.style.display=m.n?'block':'none';wantEl.textContent='🚨 '+'⭐'.repeat(m.n);if(m.n&&m.why){G.toast&&G.toast('🚨 पुलिस को तलाश! ('+m.why+')');SND.whistle&&SND.whistle()}};
 G.onJail=m=>{if(m.until){JAIL={until:performance.now()+m.ms};if(DRV){DRV=null}P.x=m.x;P.z=m.z;closeDlg();jailEl.style.display='block'}else{JAIL=null;jailEl.style.display='none';P.x=m.x;P.z=m.z;G.toast&&G.toast('🔓 रिहा हो गए')}sendPos(true)};

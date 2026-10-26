@@ -22,6 +22,7 @@ const RATE=Number(env.RATE_PER_SEC)||6, RATE_BURST=Number(env.RATE_BURST)||30; /
 // ---------- persistence (JSON, atomic write) ----------
 let db={players:{},msgs:{},world:{day:0,year:1,births:0,deaths:0,feed:[],npcs:[],lastDay:Date.now()}};
 try{db=Object.assign(db,JSON.parse(fs.readFileSync(DATA,'utf8')))}catch(e){}
+const ADULT=24;
 let dirty=false;const mark=()=>{dirty=true};
 function persist(){if(!dirty)return;dirty=false;fs.mkdirSync(path.dirname(DATA),{recursive:true});
  const tmp=DATA+'.tmp';fs.writeFileSync(tmp,JSON.stringify(db));fs.renameSync(tmp,DATA)}
@@ -66,8 +67,10 @@ function worldEvent(){const e=WEV[Math.floor(Math.random()*WEV.length)];
  feed(e.t,e.k)}
 
 // ---------- player model ----------
+function lvl(p){return 1+Math.floor(Math.sqrt((p.xp||0)/100))}
+function addXp(p,n,why){if(!p||!n)return;const l0=lvl(p);p.xp=(p.xp||0)+n;sendTo(p.id,{t:'xp',xp:p.xp,lvl:lvl(p),n,why:why||''});if(lvl(p)>l0){sendTo(p.id,{t:'notif',text:'🆙 लेवल '+lvl(p)+'! शाबाश 🎉'});pushPlayers()}}
 function pub(p){return {id:p.id,name:p.name,g:p.g,look:look(p.look),online:isOnline(p.id),state:p.state,
- age:p.life?p.life.age:0,job:p.life?p.life.job:'',married:!!p.spouse,spouse:p.spouse&&db.players[p.spouse]?db.players[p.spouse].name:'',
+ lvl:lvl(p),xp:p.xp||0,job:p.life?p.life.job:'',married:!!p.spouse,spouse:p.spouse&&db.players[p.spouse]?db.players[p.spouse].name:'',
  kids:p.life?p.life.kids:0,lives:p.lives.length,friends:p.friends.length}}
 function playersList(){return Object.values(db.players).map(pub).concat(BOTS.map(botPub)).sort((a,b)=>b.online-a.online)}
 let plTimer=null;function pushPlayers(){clearTimeout(plTimer);plTimer=setTimeout(()=>bcast({t:'players',list:playersList()}),200)}
@@ -76,21 +79,21 @@ function worldView(){const w=db.world;return {day:w.day,year:w.year,births:w.bir
 function view(p){
  const v={t:'me',id:p.id,name:p.name,g:p.g,look:look(p.look),state:p.state,friends:p.friends.map(id=>pub(db.players[id])).filter(x=>x.id),
   friendReq:p.friendReq.map(id=>({id,name:db.players[id]&&db.players[id].name})),proposals:p.proposals.map(id=>({id,name:db.players[id]&&db.players[id].name})),
-  spouse:p.spouse||null,lives:p.lives.slice(-5),turnMs:TURN_MS,activeMs:p.activeMs};
+  spouse:p.spouse||null,lives:p.lives.slice(-5),xp:p.xp||0,lvl:lvl(p)};
  if(p.state==='preg'){const el=now()-p.pregStart;v.preg={start:p.pregStart,end:p.pregStart+PREG_MS,month:Math.min(9,1+Math.floor(el/(PREG_MS/9))),now:now()}}
  if(p.state==='alive'&&p.life){const L=p.life;
   v.life={age:L.age,money:L.money,h:L.h,j:L.j,r:L.r,edu:E.EDU[L.edu],job:L.job,inc:L.inc,married:L.married,partner:L.partner,kids:L.kids,house:L.house,car:L.car,inv:L.inv,loan:L.loan||0,
    gameYear:Math.min(5,1+Math.floor(L.age/20)),log:L.log.slice(0,30),res:L.res,rnd:L.rnd,yd:L.yd};
   v.life.study=L.study||0;v.cd=p.cd||{};v.blocked=p.blocked||[];
-  v.wait=p.admin?0:Math.max(0,p.lastTurnMs+TURN_MS-activeNow(p))}
+  v.wait=0}
  if(p.state==='dead')v.summary=p.lives[p.lives.length-1];
  return v}
 function pushMe(p){sendTo(p.id,view(p))}
 function startLife(p){
- const L=E.newGame(p.name,p.g);L.started=true;E.nextYear(L);if(L.cur){E.choose(L,Math.floor(Math.random()*E.curEv(L).o.length));E.nextYear(L);if(L.cur&&L.age<5){}}p.life=L;p.state='alive';p.lastTurnMs=p.activeMs;
+ const L=E.newGame(p.name,p.g);L.started=true;L.age=ADULT;L.cur=null;L.money=Math.max(L.money||0,2000);p.life=L;p.state='alive';p.lastTurnMs=p.activeMs;
  // existing multiplayer spouse carries over
  if(p.spouse&&db.players[p.spouse]){L.married=true;L.partner=db.players[p.spouse].name}
- db.world.births++;feed('👶 '+p.name+' का जन्म हुआ! (पुणे, बरसाती जुलाई रात)','birth');mark()}
+ db.world.births++;feed('🙋 '+p.name+' शहर में आया/आई!','birth');mark()}
 function advanceYear(p){const L=p.life,out=[];
  if(L.cur){const ev=E.curEv(L),n=ev.o.filter(o=>E.okOpt(o,L)).length;const r=E.choose(L,Math.floor(Math.random()*n));if(r&&r.msg)out.push(r.msg)}
  if(L.dead)return finishLife(p);
@@ -110,8 +113,11 @@ function socialBonus(p){const L=p.life;if(!L)return;const on=p.friends.filter(is
 
 // ---------- action handlers (all validated server-side) ----------
 const H={
- next(p){if(!p.admin||p.state!=='alive'||!p.life)return;advanceYear(p)},
- newlife(p){if(p.state!=='dead')return;p.state='preg';p.pregStart=now();mark();pushMe(p);feed('🤰 '+p.name+' एक नए जीवन की प्रतीक्षा में है (तब तक शहर घूम सकते हैं)।','preg');if(p.admin){startLife(p);pushMe(p);pushPlayers()}},
+ next(p){},
+ players(p){send(socks.get(p.id),{t:'players',list:playersList()})},
+ say(p,m){say(p,m).then(r=>{if(r&&p.admin)send(socks.get(p.id),{t:'llmsrc',src:r.src,act:r.act})}).catch(e=>console.error('say',e.message))},
+ lines(p){if(!p.admin)return;const f=[];for(const d of NPCDEF){if(d[2]!=='f')continue;const R=ROLES[d[0]];f.push(...(R.hi||[]),...(R.call||[]))}send(socks.get(p.id),{t:'lines',f})},
+ newlife(p){if(p.state==='alive'&&p.life)return;startLife(p);pushMe(p);pushPlayers()},
  msg(p,m){const bt=BOTS.find(b=>b.id===m.to);if(bt){const text=clean(m.text,500);if(!text)return;const it={from:p.id,to:bt.id,text,ts:now()};send(socks.get(p.id),{t:'msg',m:it});setTimeout(()=>sendTo(p.id,{t:'msg',m:{from:bt.id,to:p.id,text:pickL(BOT_REPLY),ts:now()},fromName:bt.name}),1200);return}
   const to=db.players[m.to];if(to&&((to.blocked||[]).includes(p.id)||(p.blocked||[]).includes(to.id)))return err(p,'🚫 यह बातचीत ब्लॉक है');if(to&&!p.friends.includes(to.id))return err(p,'संदेश सिर्फ दोस्तों को — पहले दोस्ती करो 🤝');const text=clean(m.text,500);if(!to||to.id===p.id||!text)return err(p,'संदेश नहीं भेजा जा सका');
   const k=pkey(p.id,to.id);const arr=db.msgs[k]||(db.msgs[k]=[]);const it={from:p.id,to:to.id,text,ts:now()};arr.push(it);if(arr.length>200)arr.splice(0,arr.length-200);
@@ -127,7 +133,7 @@ const H={
   mark();pushMe(p);pushMe(f);pushPlayers()},
  propose(p,m){const to=db.players[m.to];if(!to||to.id===p.id)return;
   if(p.state!=='alive'||to.state!=='alive')return err(p,'दोनों का जीवित होना ज़रूरी है');
-  if(p.life.age<18||to.life.age<18)return err(p,'शादी के लिए दोनों की उम्र 18+ होनी चाहिए');
+  
   if(p.spouse||to.spouse||p.life.married||to.life.married)return err(p,'कोई पहले से शादीशुदा है');
   if(!p.friends.includes(to.id))return err(p,'पहले दोस्ती करो');
   if(!to.proposals.includes(p.id))to.proposals.push(p.id);mark();sendTo(to.id,{t:'notif',text:'💍 '+p.name+' ने शादी का प्रस्ताव भेजा!'});pushMe(to);notif(p,'प्रस्ताव भेजा गया 💍')},
@@ -138,8 +144,8 @@ const H={
   else sendTo(f.id,{t:'notif',text:'💔 '+p.name+' ने प्रस्ताव अस्वीकार किया'});
   mark();pushMe(p);pushMe(f);pushPlayers()},
  kid(p){const s=p.spouse&&db.players[p.spouse];if(!s||p.state!=='alive'||s.state!=='alive')return err(p,'जीवनसाथी (असली खिलाड़ी) ज़रूरी है');
-  if(p.life.age>50||s.life.age>50)return err(p,'उम्र ज़्यादा है');if(p.life.kids>=4)return err(p,'बच्चे बहुत हो गए!');
-  if(p.life.kidAt===p.life.age)return err(p,'इस साल पहले ही बच्चा हुआ');
+  if(p.life.kids>=4)return err(p,'बच्चे बहुत हो गए!');
+  if(p.life.kidT&&now()-p.life.kidT<600000)return err(p,'थोड़ा रुको');p.life.kidT=now();
   const kn=['आरुष','सिया','वेद','मीरा','कबीर','तारा'][Math.floor(Math.random()*6)];
   for(const x of [p,s]){const L=x.life;L.kids++;L.kidAt=L.age;L.money-=50000;L.j=E.cl(L.j+12);L.r=E.cl(L.r+8);L.hl.push({a:L.age,t:'बच्चे '+kn+' का जन्म ('+(x===p?s.name:p.name)+' के साथ)'})}
   db.world.births++;feed('👶 '+p.name+' और '+s.name+' के घर '+kn+' का जन्म!','birth');mark();pushMe(p);pushMe(s);pushPlayers()},
@@ -156,6 +162,7 @@ const H={
   const ps=POS.get(p.id);if(!ps||Math.hypot(ps.x-z.x,ps.z-z.z)>6)return err(p,'पहले '+z.n+' तक चलकर जाओ');
   p.cd=p.cd||{};const t=now(),k=z.act;if(!p.admin&&p.cd[k]&&t<p.cd[k])return err(p,'थोड़ा रुको — '+Math.ceil((p.cd[k]-t)/1000)+' सेकंड');
   const L=p.life,g=[];const st=(f,d,lbl)=>{if(!d)return;if(f==='money')L.money+=d;else L[f]=E.cl(L[f]+d);g.push((d>0?'+':'')+(f==='money'?'₹'+d:d)+' '+lbl)};
+  addXp(p,k==='work'?8:k==='study'?5:2,k);
   if(k==='study'){if(L.age<4)return err(p,'अभी बहुत छोटे हो 👶');L.study=(L.study||0)+1;g.push('+1 पढ़ाई 📚');st('j',-1,'खुशी')}
   else if(k==='work'){if(L.age<14){st('money',100,'पैसा');st('j',1,'खुशी')}else{st('money',Math.max(500,Math.round((L.inc||60000)/150/100)*100),'पैसा');st('h',-1,'सेहत')}}
   else if(k==='heal'){st('h',6,'सेहत');if(L.age>=18)st('money',-1500,'पैसा')}
@@ -195,8 +202,8 @@ function onPos(p,m){const t=now(),o=POS.get(p.id);if(o&&t-o.t<90)return; // ~10/
 let fullAt=0;
 setInterval(()=>{const t=now(),full=t-fullAt>1500;if(full)fullAt=t;const list=[];
  for(const [id,o] of POS){if(!isOnline(id)){POS.delete(id);continue}const p=db.players[id];if(!p)continue;if(!o.ch&&!full)continue;o.ch=false;
-  list.push({id,x:o.x,z:o.z,ry:o.ry,s:o.s,n:p.name,g:p.g,l:look(p.look),a:p.life?p.life.age:0})}
- for(const b of BOTS){if(b.hid||(!b.ch&&!full))continue;b.ch=false;list.push({r:b.role,id:b.id,x:+b.x.toFixed(2),z:+b.z.toFixed(2),ry:+b.ry.toFixed(2),s:b.sit?1:0,n:b.name,g:b.g,l:b.look,a:b.age,b:1})}
+  list.push({id,x:o.x,z:o.z,ry:o.ry,s:o.s,n:p.name,g:p.g,l:look(p.look),a:lvl(p)})}
+ for(const b of BOTS){if(b.hid||(!b.ch&&!full))continue;b.ch=false;list.push({r:b.role,id:b.id,x:+b.x.toFixed(2),z:+b.z.toFixed(2),ry:+b.ry.toFixed(2),s:b.sit?1:0,n:b.name,g:b.g,l:b.look,a:0,b:1})}
  if(list.length&&socks.size)bcast({t:'poses',list});},125).unref();
 function safeAt(x,z){return T.ZONES.some(q=>q.safe&&Math.hypot(x-q.x,z-q.z)<14)}
 
@@ -209,11 +216,11 @@ const BOT_IDLE=['हाय गर्मी! 🥵','बस आ रही हो�
 const BOT_OW=['अरे! मारते क्यों हो? 😠','ओये! धीरे भाई!','आह! मम्मी! 😵','चलो, मैं जा रहा हूँ यहाँ से…','पुलिस बुलाऊँ क्या? 🚓'];
 const BOT_REPLY=['🤖 मैं बॉट हूँ, पर बात अच्छी लगी!','हाहा 😄','ठीक है जी 🙏','शहर में मिलते हैं!'];
 const BOTS=[];
-function botPub(b){return {id:b.id,role:b.role,name:(b.role?'':'🤖 ')+b.name,g:b.g,look:b.look,online:true,state:'alive',age:b.age,job:'',married:false,spouse:'',kids:0,lives:0,friends:0,bot:true}}
+function botPub(b){return {id:b.id,role:b.role,name:(b.role?'':'🤖 ')+b.name,g:b.g,look:b.look,online:true,state:'alive',lvl:1,job:'',married:false,spouse:'',kids:0,lives:0,friends:0,bot:true}}
 function botSay(b,text){bcast({t:'say',id:b.id,text})}
 function botFace(b,a){b.ry=Math.atan2(a.x-b.x,a.z-b.z);b.ch=true;b.wait=Math.max(b.wait,2);b.sit=false;b.path=null}
 function botHit(b,p,dx,dz){b.x=Math.max(-T.HALF,Math.min(T.HALF,b.x+dx*1.2));b.z=Math.max(-T.HALF,Math.min(T.HALF,b.z+dz*1.2));b.sit=false;b.ch=true;b.wait=1.2;b.path=null;
- if(b.role==='police'||b.role==='traffic'){b.hits=(b.hits||0)+1;if(b.hits>=3){b.hits=0;b.down=now()+12000;b.chase=null;bcast({t:'fx',k:'ko',id:b.id});return}}
+ if(b.role==='police'||b.role==='traffic'){b.hits=(b.hits||0)+1;if(b.hits>=3){b.hits=0;b.down=now()+12000;b.chase=null;addXp(p,15,'पुलिस से भिड़ंत');bcast({t:'fx',k:'ko',id:b.id});return}}
  if(Math.random()<.7)setTimeout(()=>botSay(b,pickL(BOT_OW)),400);b.flee=true}
 for(let i=0;i<NBOTS;i++){const g=i%2?'f':'m',n=T.NODES[Math.floor(Math.random()*T.NODES.length)];
  BOTS.push({id:'bot'+i,name:BOT_NAMES[g][Math.floor(i/2)%12],g,look:pickL(g==='f'?BOT_LOOK_F:BOT_LOOK_M),age:16+Math.floor(Math.random()*50),x:n[0]+(Math.random()-.5),z:n[1],ry:0,node:T.NODES.indexOf(n),tgt:null,wait:Math.random()*3,sit:false,ch:true,sp:1.3+Math.random()*.5})}
@@ -231,7 +238,7 @@ function botTick(dt){roleTick(dt);for(const b of BOTS){if(b.role)continue;
  const st=Math.min(d-stop,b.sp*dt);b.x+=dx/d*st;b.z+=dz/d*st;b.ry=Math.atan2(dx,dz);b.ch=true}}
 let botLast=now();setInterval(()=>{const t=now();botTick(Math.min(1,(t-botLast)/1000));botLast=t},200).unref();
 setInterval(()=>{if(BOTS.length&&socks.size&&Math.random()<.5){const b=pickL(BOTS.filter(x=>!x.role));botSay(b,pickL(BOT_IDLE))}},9000).unref();
-// ---------- role NPCs (shopkeeper, chaiwala, vendor, teacher, doctor, pujari, kids, elders) + police ----------
+// ---------- role NPCs (shopkeeper, chaiwala, vendor, teacher, doctor, pujari, cricketers, elders) + police ----------
 const NPC_PHASE=env.NPC_PHASE!=null?Number(env.NPC_PHASE):null;
 function dayPhase(){if(NPC_PHASE!=null)return NPC_PHASE;const w=db.world;return((w.day%10)+Math.min(1,(now()-w.lastDay)/WORLD_DAY_MS))/10}
 const ZP=id=>{const z=T.ZONES.find(q=>q.id===id);return [z.x,z.z]};
@@ -245,7 +252,7 @@ const ROLES={
  teacher:{e:'📚',t:'मास्टरजी',look:'saree',items:[['padho','📖 कुछ सिखाइए',0,{study:1}]],hi:['पढ़ाई कैसी चल रही है?','होमवर्क किया?'],call:['चलो बच्चों, क्लास का टाइम!']},
  doctor:{e:'🩺',t:'डॉक्टर साहब',look:'doctor',items:[['checkup','🩺 चेकअप ₹200',200,{h:5}]],hi:['कैसी तबीयत है?','पानी ज़्यादा पिया करो'],call:['अगला मरीज़!']},
  pujari:{e:'🛕',t:'पुजारी जी',look:'pujari',items:[['prasad','🙏 प्रसाद लीजिए',0,{j:3}]],hi:['जय श्री राम 🙏','आओ बेटा, आशीर्वाद लो'],call:['🔔 आरती का समय हो गया','ॐ नमः शिवाय 🙏']},
- kid:{e:'🏏',t:'',look:'normal',kid:1,items:[['cricket','🏏 क्रिकेट खेलें!',0,{h:2,j:3}]],hi:['भैया बैटिंग करोगे?','आउट! हाहा 😂'],call:['चौका! 🏏','हाउज़ैट!! ☝️']},
+ cricket:{e:'🏏',t:'',look:'shirt',items:[['cricket','🏏 क्रिकेट खेलें!',0,{h:2,j:3}]],hi:['आओ, एक ओवर खेलोगे?','आउट! हाहा 😂'],call:['चौका! 🏏','हाउज़ैट!! ☝️']},
  elder:{e:'👴',t:'दादाजी',look:'kurta',items:[['salah','💭 कोई सलाह दीजिए',0,{j:1,r:1}]],hi:['जीते रहो बेटा','हमारे ज़माने में…'],call:['सुबह की सैर सबसे अच्छी 🚶']},
  police:{e:'👮',t:'हवलदार',look:'police',police:1,hi:['जय हिंद! कोई दिक्कत?','शहर में सब ठीक है?'],call:['सावधान रहें, सुरक्षित रहें']},
  traffic:{e:'🚦',t:'ट्रैफ़िक पुलिस',look:'traffic',police:1,hi:['हेलमेट पहनो, धीरे चलाओ!','सीट बेल्ट लगाओ 🚗'],call:['🎵 फ्र्र्र्र! रुको!','धीमे चलो!']}};
@@ -259,14 +266,14 @@ const NPCDEF=[
  ['teacher','शर्मा मैडम','f',42,[[.3,.6,[SC[0]+4,SC[1]-22],'post'],[.6,.72,[MK[0]-2,MK[1]-12],'wander']]],
  ['doctor','डॉ. वर्मा','m',48,[[0,1,[HO[0]-2,HO[1]-18],'post']]],
  ['pujari','पंडित जी','m',62,[[0,1,[TE[0]+1,TE[1]-15.5],'post']]],
- ['kid','मुन्ना','m',10,[[.35,.75,[ST[0]-3,ST[1]-24],'cricket']]],['kid','पिंकी','f',9,[[.35,.75,[ST[0]+3,ST[1]-22],'cricket']]],['kid','गोलू','m',11,[[.35,.75,[ST[0],ST[1]-30],'cricket']]],
+ ['cricket','रोहित','m',22,[[.35,.75,[ST[0]-3,ST[1]-24],'cricket']]],['cricket','स्नेहा','f',21,[[.35,.75,[ST[0]+3,ST[1]-22],'cricket']]],['cricket','करण','m',24,[[.35,.75,[ST[0],ST[1]-30],'cricket']]],
  ['elder','दादाजी','m',72,[[.2,.35,[PA[0]-10,PA[1]-4],'walk'],[.35,.7,[18,22],'bench'],[.7,.85,[TE[0]-4,TE[1]-6],'post']]],['elder','दादीजी','f',68,[[.2,.35,[PA[0]+10,PA[1]-4],'walk'],[.35,.7,[42,22],'bench']]],
  ['police','हवलदार सिंह','m',40,[[0,1,[THANA[0]+3,THANA[1]+22],'post']]],['police','सिपाही यादव','m',31,[[0,.5,[MK[0]-4,MK[1]+16.5],'post'],[.5,1,[-60+6.5,-30],'post']]],
  ['traffic','ट्रैफ़िक हवलदार','m',36,[[.25,.88,[4.5,4.5],'post']]]];
 const nearestNode=(x,z)=>{let bi=0,bd=1e9;T.NODES.forEach((n,i)=>{const d=Math.hypot(n[0]-x,n[1]-z);if(d<bd){bd=d;bi=i}});return bi};
 function bfs(a,b){if(a===b)return[a];const prev=new Map([[a,-1]]),q=[a];while(q.length){const n=q.shift();if(n===b)break;for(const m of T.EDGES[n])if(!prev.has(m)){prev.set(m,n);q.push(m)}}if(!prev.has(b))return[b];const r=[];for(let n=b;n!==-1;n=prev.get(n))r.unshift(n);return r}
 for(const [role,name,g,age,sched] of NPCDEF){const R=ROLES[role],i=BOTS.length,hm=T.NODES[(i*7)%T.NODES.length];
- BOTS.push({id:'npc'+i,role,name:R.e+' '+name+(R.t?' '+R.t:''),base:name,g,look:R.look,age,x:sched[0][2][0],z:sched[0][2][1],ry:0,sched,home:[hm[0]+(i%2?5:-5),hm[1]+5],route:[],slot:-2,wait:0,sit:false,ch:true,sp:role==='kid'?2.2:1.4,hid:false,idleT:0})}
+ BOTS.push({id:'npc'+i,role,name:R.e+' '+name+(R.t?' '+R.t:''),base:name,g,look:R.look,age,x:sched[0][2][0],z:sched[0][2][1],ry:0,sched,home:[hm[0]+(i%2?5:-5),hm[1]+5],route:[],slot:-2,wait:0,sit:false,ch:true,sp:role==='cricket'?2.2:1.4,hid:false,idleT:0})}
 const ROLEB=BOTS.filter(b=>b.role),POLICE=ROLEB.filter(b=>ROLES[b.role].police);
 function goTo(b,x,z){if(Math.hypot(b.x-x,b.z-z)<14){b.route=[[x,z]];b.sit=false;b.ch=true;return}const path=bfs(nearestNode(b.x,b.z),nearestNode(x,z)).map(n=>T.NODES[n]);b.route=path.concat([[x,z]]);b.sit=false;b.ch=true}
 function nearPlayer(x,z,r){for(const o of POS.values())if(Math.hypot(o.x-x,o.z-z)<r)return o;return null}
@@ -315,6 +322,23 @@ function patrolTick(dt,t){const v=PCAR;if(!v)return;let tx,tz,sp=8;const tgt=v.c
  else{if(v.chase){v.chase=null;v.ch=true}for(const [id,o] of POS){const p=db.players[id];if(p&&p.wanted>=2&&Math.hypot(o.x-v.x,o.z-v.z)<60){v.chase=id;v.ch=true;break}}
   const w=PATROL[v.wp];tx=w[0];tz=w[1];if(Math.hypot(tx-v.x,tz-v.z)<1){v.wp=(v.wp+1)%4;return}}
  const dx=tx-v.x,dz=tz-v.z,d=Math.hypot(dx,dz)||1,st=Math.min(d,sp*dt);v.x+=dx/d*st;v.z+=dz/d*st;v.ry=Math.atan2(dx,dz);v.ch=true}
+
+// ---------- AI dialogue (LLM with scripted fallback) ----------
+const LLM=require('./llm.js')(env);
+const DEFLECT=['ऐसी बातें नहीं, भाई/बहन 🙏 कुछ और पूछो — चाय पिओगे?','माफ़ करना, इस पर बात नहीं करूँगी/करूँगा। शहर के बारे में पूछो!','अरे, तमीज़ से बात करो 🙂 कोई काम हो तो बताओ।'];
+const PH=t=>t<.25?'सुबह':t<.5?'दोपहर':t<.75?'शाम':'रात';
+async function say(p,m){if(p.state!=='alive'||!p.life)return;const b=npcOf(p,m.id);if(!b)return err(p,'पास जाकर बात करो');const R=ROLES[b.role];const text=clean(m.text,200);
+ p.mem=p.mem||{};const mem=p.mem[b.id]||(p.mem[b.id]=[]);const z=T.ZONES.slice().sort((a,c)=>Math.hypot(a.x-b.x,a.z-b.z)-Math.hypot(c.x-b.x,c.z-b.z))[0];
+ const P={name:b.base||b.name,role:b.role+(R.t?' ('+R.t+')':''),where:z?z.n:'शहर',time:PH(dayPhase()),player:p.name,dost:dost(p,b),mem:mem.join(' | '),items:(R.items||[]).map(i=>i[0]+'='+i[1]+' ₹'+i[2]).join(', '),job:!!R.job,mood:R.mood};
+ const r=await LLM.reply(p.id,P,text,{line:pickL(R.hi||['हाँ जी, बोलो?']),deflect:pickL(DEFLECT)});
+ const act=applyAct(p,b,r);mem.push((text?p.name+': '+text.slice(0,60)+' → ':'')+r.say.slice(0,60));if(mem.length>4)mem.shift();
+ if(!act)dlg(p,b,r.say);bcast({t:'fx',k:'talk',id:b.id});return r}
+// server-side validation of model-proposed actions: only whitelisted, small effects
+function applyAct(p,b,r){const R=ROLES[b.role];p.npcf=p.npcf||{};
+ if(r.act==='dost+'||r.act==='dost-'){p.npcf[b.id]=Math.max(0,Math.min(20,(p.npcf[b.id]||0)+(r.act==='dost+'?1:-1)));return false}
+ if(r.act==='buy'&&(R.items||[]).some(i=>i[0]===r.item)){dlg(p,b,r.say);onDlg(p,{id:b.id,k:'buy:'+r.item});return true}
+ if(r.act==='job'&&R.job&&!p.gig){dlg(p,b,r.say);onDlg(p,{id:b.id,k:'job'});return true}
+ r.act='none';return false}
 // dialogue: tap-to-talk with reply chips
 function npcOf(p,id){const b=ROLEB.find(x=>x.id===id),a=POS.get(p.id);if(!b||!a||b.hid||Math.hypot(a.x-b.x,a.z-b.z)>4.5)return null;return b}
 function dost(p,b){p.npcf=p.npcf||{};return p.npcf[b.id]||0}
@@ -345,7 +369,7 @@ function onDlg(p,m){if(p.state!=='alive'||!p.life||p.jail)return;const b=npcOf(p
   if(k==='complain'){if(!p.admin&&p.cd.cmp&&t<p.cd.cmp)return dlg(p,b,'आपकी शिकायत पहले ही दर्ज है 📝');p.cd.cmp=t+60000;feed('📝 '+p.name+' ने थाने में शिकायत दर्ज कराई','police');return dlg(p,b,'शिकायत दर्ज हो गई ✅ नंबर #'+(1000+Math.floor(Math.random()*9000))+'। हम जल्द कार्रवाई करेंगे 👮')}
   if(k==='surrender'&&p.wanted){p.wanted=Math.max(1,p.wanted-1);send(socks.get(p.id),{t:'dlg',id:b.id,close:1});return knock(p,'busted',b)}}}
 function gigCheck(p,o){const g=p.gig;if(!g)return;if(now()>g.until){p.gig=null;sendTo(p.id,{t:'gig',to:null});return sendTo(p.id,{t:'notif',text:'⌛ डिलीवरी का समय निकल गया'})}
- const z=T.ZONES.find(q=>q.id===g.to);if(z&&Math.hypot(o.x-z.x,o.z-z.z)<6&&p.life){p.life.money+=g.pay;p.life.j=E.cl(p.life.j+2);p.npcf=p.npcf||{};p.npcf[g.from]=(p.npcf[g.from]||0)+2;p.gig=null;mark();sendTo(p.id,{t:'gig',to:null});sendTo(p.id,{t:'gain',text:'📦 डिलीवरी पूरी! +₹'+g.pay+'  +2 खुशी  +दोस्ती'});pushMe(p)}}
+ const z=T.ZONES.find(q=>q.id===g.to);if(z&&Math.hypot(o.x-z.x,o.z-z.z)<6&&p.life){p.life.money+=g.pay;addXp(p,40,'डिलीवरी');p.life.j=E.cl(p.life.j+2);p.npcf=p.npcf||{};p.npcf[g.from]=(p.npcf[g.from]||0)+2;p.gig=null;mark();sendTo(p.id,{t:'gig',to:null});sendTo(p.id,{t:'gain',text:'📦 डिलीवरी पूरी! +₹'+g.pay+'  +2 खुशी  +दोस्ती'});pushMe(p)}}
 // chalan: overspeeding seen by police
 const SPEED_LIMIT={car:11,auto:9,scooter:10};
 function speedCheck(p,v,speed){const t=now();if(speed<=SPEED_LIMIT[v.kind]){p.ovs=0;return}p.ovs=(p.ovs||0)+1;if(p.ovs<5)return;
@@ -429,13 +453,15 @@ function activeNow(p){return p.activeMs+(socks.has(p.id)?now()-last:0)}
 setInterval(()=>{const t=now(),dt=t-last;last=t;
  for(const id of socks.keys()){const p=db.players[id];if(p)p.activeMs+=dt} // only ACTIVE players' life clocks run
  for(const p of Object.values(db.players))if(p.state==='preg'&&t>=p.pregStart+PREG_MS){startLife(p);pushMe(p);pushPlayers()}
- for(const id of socks.keys()){const p=db.players[id];if(!p||p.state!=='alive'||!p.life)continue;for(let k=0;k<5&&p.state==='alive'&&activeNow(p)-p.lastTurnMs>=TURN_MS;k++)advanceYear(p)}
  const w=db.world;if(t-w.lastDay>500*WORLD_DAY_MS)w.lastDay=t-WORLD_DAY_MS;while(t-w.lastDay>=WORLD_DAY_MS){w.lastDay+=WORLD_DAY_MS;w.day++;
-  if(w.day>=360){w.day=0;w.year++;w.npcs.forEach(n=>n.age++);feed('🎆 विश्व वर्ष '+w.year+' शुरू हुआ!','year')}
+  if(w.day>=360){w.day=0;w.year++;feed('🎆 विश्व वर्ष '+w.year+' शुरू हुआ!','year')}
   if(Math.random()<.15)npcTick();if(Math.random()<.04)worldEvent();mark()}
  bcast({t:'tick',day:w.day,year:w.year,active:socks.size,births:w.births,deaths:w.deaths});
 },1000).unref();
 
+// migrate old life-sim accounts: everyone is an adult, no age/rebirth
+for(const p of Object.values(db.players)){if(!p.lives)p.lives=[];if(!p.friends)p.friends=[];if(!p.friendReq)p.friendReq=[];if(!p.proposals)p.proposals=[];p.xp=p.xp||0;
+ if(p.state!=='alive'||!p.life){try{startLife(p)}catch(e){}}else{p.life.age=ADULT;p.life.cur=null;p.life.dead=false}}
 server.listen(PORT,()=>console.log(`ज़िंदगी ऑनलाइन चल रहा है: http://localhost:${PORT}  (TIME_SCALE=${SCALE}, pregnancy=${Math.round(PREG_MS/1000)}s, turn=${TURN_MS}ms)`));
 function shutdown(){try{dirty=true;persist()}catch(e){}process.exit(0)}
 process.on('SIGINT',shutdown);process.on('SIGTERM',shutdown);

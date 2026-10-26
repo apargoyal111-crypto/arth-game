@@ -172,6 +172,7 @@ function on(m){
  else if(m.t==='say'){if(window.onSay)window.onSay(m)}
  else if(m.t==='dlg'){if(window.onDlg)window.onDlg(m)}
  else if(m.t==='wanted'){if(window.onWanted)window.onWanted(m)}
+ else if(m.t==='xp'){if(window.ME){ME.xp=m.xp;ME.lvl=m.lvl}if(window.toast&&m.n)toast('✨ +'+m.n+' XP')}
  else if(m.t==='ko'){if(window.onKo)window.onKo(m)}
  else if(m.t==='jail'){if(window.onJail)window.onJail(m)}
  else if(m.t==='gig'){if(window.onGig)window.onGig(m)}
@@ -195,7 +196,7 @@ function bar(l,v,c){return '<div class="st">'+l+' <b>'+v+'</b><div class="bar"><
 function renderStats(){var st=$('stats');if(!ME){st.style.display='none';return}st.style.display='block';
  var top='<div class="srow"><span>'+esc(ME.name)+'</span><span class="pill g">🟢 '+(W.active||0)+'</span></div>';
  var L=ME.life;if(!L){st.innerHTML=top+'<div>'+(ME.state==='preg'?'🤰 नया जन्म आने वाला है':'🕯️ जीवन समाप्त')+'</div>';return}
- st.innerHTML=top+'<div class="srow"><span>🎂 '+L.age+' साल</span><span'+(L.money<0?' style="color:#ff8a8a"':'')+'>💰 ₹'+fmt(L.money)+'</span></div>'+bar('❤️ सेहत',L.h,L.h<30?'#e74c3c':'#2ecc71')+bar('😊 खुशी',L.j,'#5b9cff')+bar('🤝 रिश्ते',L.r,'#c86bfa')+'<div class="st">📚 पढ़ाई <b>'+(L.study||0)+'</b></div>'}
+ st.innerHTML=top+'<div class="srow"><span>⭐ लेवल '+(ME.lvl||1)+' · '+(ME.xp||0)+' XP</span><span'+(L.money<0?' style="color:#ff8a8a"':'')+'>💰 ₹'+fmt(L.money)+'</span></div>'+bar('❤️ सेहत',L.h,L.h<30?'#e74c3c':'#2ecc71')+bar('😊 खुशी',L.j,'#5b9cff')+bar('🤝 रिश्ते',L.r,'#c86bfa')+'<div class="st">📚 पढ़ाई <b>'+(L.study||0)+'</b></div>'}
 function fxHtml(d){if(!d)return '';var a=[];if(d[0])a.push('<span class="'+(d[0]>0?'p':'n')+'">'+(d[0]>0?'+':'-')+'₹'+fmt(Math.abs(d[0]))+'</span>');var n=['','सेहत','खुशी','रिश्ते'];for(var i=1;i<4;i++)if(d[i])a.push('<span class="'+(d[i]>0?'p':'n')+'">'+(d[i]>0?'+':'')+d[i]+' '+n[i]+'</span>');return a.length?'<div class="fx">'+a.join('')+'</div>':''}
 function render(){if(!ME)return;viewP=false;renderStats();clearInterval(waitT);
  document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',DRAWER&&b.dataset.tab===tab)});
@@ -208,7 +209,7 @@ function rLife(){var h='';
  if(ME.state==='dead'){var x=ME.summary||{};h='<h1>🕯️ जीवन समाप्त</h1><div class="card"><h2>'+esc(x.name)+'</h2><p>उम्र: <b>'+x.age+' साल</b><br>कारण: '+esc(x.cause)+'<br>शिक्षा: '+esc(x.edu)+'<br>करियर: '+esc(x.job)+'<br>परिवार: '+(x.married?'जीवनसाथी '+esc(x.partner):'अकेले')+', '+x.kids+' बच्चे<br>घर: '+(x.house?'अपना':'किराये का')+'<br>संपत्ति: <b>₹'+fmt(x.wealth)+'</b></p><div class="score">'+x.score+'/100</div><p style="text-align:center;font-weight:700">'+esc(x.rating)+'</p></div><div class="card"><h2>✨ झलकियाँ</h2><div class="tl">'+(x.hl||[]).map(function(e){return '<div><b>'+e.a+':</b> '+esc(e.t)+'</div>'}).join('')+'</div></div><button class="btn c" id="nl">🔄 नया जीवन (फिर 3 दिन का गर्भ)</button>';
   $('app').innerHTML=h;$('nl').onclick=function(){S({t:'newlife'})};return}
  var L=ME.life;
- h+='<div class="card"><h2>📖 '+esc(ME.name)+' — '+L.age+' साल</h2><p class="small">ज़िंदगी अपने आप आगे बढ़ती है (हर ऑनलाइन मिनट = 1 साल)। शहर में जाकर कमाओ, पढ़ो, आराम करो, दोस्त बनाओ:</p><p class="small">🏫/🎓 पढ़ाई · 🛒/🏢/🏭 काम · 🏥 इलाज · 🛕/🌳/🌊/🏠 आराम · 🏟️ खेल · 👋 लोगों से बात = रिश्ते</p>';
+ h+='<div class="card"><h2>📖 '+esc(ME.name)+' — ⭐ लेवल '+(ME.lvl||1)+'</h2><p class="small">खुली दुनिया: शहर में काम, डिलीवरी और पढ़ाई से पैसा और XP कमाओ, दोस्त बनाओ:</p><p class="small">🏫/🎓 पढ़ाई · 🛒/🏢/🏭 काम · 🏥 इलाज · 🛕/🌳/🌊/🏠 आराम · 🏟️ खेल · 👋 लोगों से बात = रिश्ते</p>';
  var f=['🎓 '+esc(L.edu)];if(L.job)f.push('💼 '+esc(L.job)+(L.inc?' (₹'+fmt(L.inc)+'/साल)':''));if(L.married)f.push('💍 '+esc(L.partner)+(ME.spouse?' (खिलाड़ी)':''));if(L.kids)f.push('👶 '+L.kids);if(L.house)f.push('🏠');if(L.car)f.push('🚗');if(L.loan)f.push('🧾 कर्ज़ ₹'+fmt(L.loan));
  h+='<div class="flags">'+f.join(' · ')+'</div></div>';
  if(ME.spouse)h+='<button class="btn alt c" id="kid">👶 जीवनसाथी के साथ बच्चा</button>';
@@ -219,7 +220,7 @@ function rLife(){var h='';
 function lastLives(){if(!ME.lives||!ME.lives.length)return '';return '<div class="card"><h2>पिछले जीवन</h2>'+ME.lives.map(function(l){return '<div class="li">'+esc(l.name)+' — '+l.age+' साल, '+l.score+'/100 '+esc(l.rating)+'</div>'}).join('')+'</div>'}
 function clockHtml(){return '🌍 विश्व वर्ष <b>'+W.year+'</b>, दिन <b>'+W.day+'</b>/360<br>🟢 सक्रिय खिलाड़ी: <b>'+W.active+'</b> · 👶 जन्म: <b>'+W.births+'</b> · 🕯️ मृत्यु: <b>'+W.deaths+'</b>'}
 function rWorld(){$('app').innerHTML='<div class="card"><h2>🌍 पुणे की दुनिया</h2><p id="wclock">'+clockHtml()+'</p><p class="small">दुनिया हमेशा चलती रहती है — त्योहार, बाढ़, बाज़ार, चुनाव सब पर असर डालते हैं।</p></div><div class="card feed"><h2>📰 लाइव खबरें</h2>'+(W.feed||[]).map(function(f){return '<div class="li"><span class="small">व.'+f.year+' दि.'+f.day+'</span> '+esc(f.text)+'</div>'}).join('')+'</div>'}
-function pRow(p,extra){return '<div class="pl'+(p.online?'':' sl')+'"><div class="av">'+(p.bot?'🤖':p.g==='m'?'👦':'👧')+'<i class="'+(p.online?'on':'')+'"></i></div><div class="nm"><b>'+esc(p.name)+'</b><small>'+(p.state==='preg'?'🤰 गर्भ में':p.state==='dead'?'🕯️ अगले जीवन की प्रतीक्षा':p.age+' साल'+(p.job?' · '+esc(p.job):''))+(p.bot?' · बॉट':p.online?' · ऑनलाइन':' · 😴 सो रहे हैं')+'</small></div>'+(extra||'')+'</div>'}
+function pRow(p,extra){return '<div class="pl'+(p.online?'':' sl')+'"><div class="av">'+(p.bot?'🤖':p.g==='m'?'👦':'👧')+'<i class="'+(p.online?'on':'')+'"></i></div><div class="nm"><b>'+esc(p.name)+'</b><small>'+(p.state==='preg'?'🤰 गर्भ में':p.state==='dead'?'🕯️ अगले जीवन की प्रतीक्षा':'⭐ Lv '+(p.lvl||1)+(p.job?' · '+esc(p.job):''))+(p.bot?' · बॉट':p.online?' · ऑनलाइन':' · 😴 सो रहे हैं')+'</small></div>'+(extra||'')+'</div>'}
 function rPeople(){var h='';
  if(ME.proposals.length)h+='<div class="card rand"><h2>💍 शादी के प्रस्ताव</h2>'+ME.proposals.map(function(r){return '<p><b>'+esc(r.name)+'</b></p><button class="btn sm grn" data-pa="'+r.id+'">स्वीकार</button><button class="btn sm red" data-pd="'+r.id+'">अस्वीकार</button>'}).join('')+'</div>';
  if(ME.friendReq.length)h+='<div class="card"><h2>🤝 दोस्ती के अनुरोध</h2>'+ME.friendReq.map(function(r){return '<p><b>'+esc(r.name)+'</b></p><button class="btn sm grn" data-fa="'+r.id+'">स्वीकार</button><button class="btn sm alt" data-fd="'+r.id+'">मना</button>'}).join('')+'</div>';

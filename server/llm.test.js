@@ -1,0 +1,18 @@
+'use strict';const mk=require('./llm.js');let pass=0,fail=0;const ok=(c,m)=>{c?pass++:fail++;console.log(c?'  ✔':'  ✘',m)};
+const P={name:'सीमा',role:'chai',where:'बाज़ार',time:'शाम',player:'आरव',dost:2,mem:'',items:'chai=चाय ₹10',job:true};const FB={line:'फ़ॉलबैक लाइन',deflect:'मना'};
+const resp=o=>async()=>({ok:true,json:async()=>({choices:[{message:{content:typeof o==='string'?o:JSON.stringify(o)}}]})});
+(async()=>{console.log('LLM unit tests (mocked provider)');
+ let L=mk({});ok(!(await L.reply('p',P,'नमस्ते',FB)).say.includes('x')&&(await L.reply('p',P,'नमस्ते',FB)).src==='nokey','no key -> scripted fallback');
+ L=mk({GEMINI_API_KEY:'k',LLM_TIMEOUT_MS:'200'},(u,o)=>new Promise((r,j)=>o.signal.addEventListener('abort',()=>j(new Error('abort')))));let t=Date.now();const r1=await L.reply('p',P,'हाय',FB);ok(r1.src==='error'&&r1.say===FB.line&&Date.now()-t<1500,'timeout -> fallback');
+ let sent=null;L=mk({GEMINI_API_KEY:'secret-k'},async(u,o)=>{sent={u,o};return resp({say:'नमस्ते आरव! चाय पिओगे?',act:'buy',item:'chai'})()});const r2=await L.reply('p',P,'हाय',FB);
+ ok(r2.src==='llm'&&r2.act==='buy'&&r2.item==='chai','LLM reply parsed with action');ok(/generativelanguage.googleapis.com\/v1beta\/openai\/chat\/completions/.test(sent.u)&&JSON.parse(sent.o.body).max_tokens<=80,'default Gemini OpenAI-compatible endpoint, max_tokens<=80');
+ ok(!JSON.stringify(r2).includes('secret-k'),'key not in reply');
+ const r3=await L.reply('p',P,'फिर से',FB);ok(r3.src==='rate','per-player 3s gap rate limit');
+ L=mk({GEMINI_API_KEY:'k',LLM_GAP_MS:'1',LLM_PER_HOUR:'3'},resp({say:'ठीक है',act:'none'}));let n=0;for(let i=0;i<6;i++){await new Promise(r=>setTimeout(r,3));if((await L.reply('q',P,'बात '+i,FB)).src==='llm')n++}ok(n===3,'hourly cap per player ('+n+')');
+ L=mk({GEMINI_API_KEY:'k',LLM_GAP_MS:'1',LLM_GLOBAL_PER_MIN:'2'},resp({say:'ठीक है',act:'none'}));n=0;for(let i=0;i<5;i++)if((await L.reply('u'+i,P,'हेलो',FB)).src==='llm')n++;ok(n===2,'global per-minute cap');
+ L=mk({GEMINI_API_KEY:'k'},resp({say:'पैसे ले लो',act:'money',amount:99999}));const r4=await L.reply('z',P,'पैसे दो',FB);ok(r4.act==='none'&&r4.amount===undefined||r4.act==='none','invalid action (money) rejected -> none');
+ L=mk({GEMINI_API_KEY:'k'},resp({say:'chalo sexy baatein',act:'none'}));ok((await L.reply('s',P,'हाय',FB)).src==='filtered','unsafe model output filtered');
+ ok((await mk({GEMINI_API_KEY:'k'},resp({say:'x'})).reply('s2',P,'tum sexy ho',FB)).say===FB.deflect,'unsafe player input deflected without calling model');
+ ok((await mk({GEMINI_API_KEY:'k'},resp('just english text')).reply('s3',P,'hi',FB)).src==='filtered','non-Hindi output falls back');
+ L=mk({GEMINI_API_KEY:'k',LLM_BASE_URL:'https://api.groq.com/openai/v1',LLM_MODEL:'llama-3.1-8b-instant'},async(u,o)=>{sent={u,o};return resp({say:'हाँ',act:'none'})()});await L.reply('g',P,'हाँ?',FB);ok(sent.u==='https://api.groq.com/openai/v1/chat/completions'&&JSON.parse(sent.o.body).model==='llama-3.1-8b-instant','LLM_BASE_URL / LLM_MODEL overrides');
+ console.log(`\nLLM RESULT: ${pass} passed, ${fail} failed`);process.exit(fail?1:0)})();
