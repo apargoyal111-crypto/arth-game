@@ -346,9 +346,13 @@ const TPL={};let assetsReady=false;const pending=new Set();const matCache=new Ma
 function prep(gltf,H){const s=gltf.scene;s.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(s);const h=box.max.y-box.min.y||1;return {scene:s,s:H/h,y:-box.min.y*H/h}}
 const LMG=new THREE.LoadingManager();LMG.onProgress=(u,a,b)=>{G.onLoadProgress&&G.onLoadProgress(a/b)};const loader=new GLTFLoader(LMG);loader.setMeshoptDecoder(MeshoptDecoder);
 const loadM=u=>loader.loadAsync(u);
-Promise.all([loadM('models/man.glb'),loadM('models/woman.glb')]).then(([man,wom])=>{
+const ldJ=u=>fetch(u).then(r=>r.ok?r.json():null).catch(()=>null);
+function mkClips(J,scene){if(!J)return null;const pel=scene.getObjectByName('pelvis'),p0=pel&&pel.position.clone(),C={};
+ for(const [k,a] of Object.entries(J)){const tr=[];for(const [b,q] of Object.entries(a.q))tr.push(new THREE.QuaternionKeyframeTrack(b+'.quaternion',a.t,q));
+  if(p0&&a.hy){const v=[];for(const h of a.hy)v.push(p0.x,p0.y,p0.z*h);tr.push(new THREE.VectorKeyframeTrack('pelvis.position',a.t,v))}C[k]=new THREE.AnimationClip(k,a.d,tr)}return C}
+Promise.all([loadM('models/man.glb'),loadM('models/woman.glb'),ldJ('models/anim_m.json'),ldJ('models/anim_f.json')]).then(([man,wom,jm,jf])=>{
  const clips=g=>{const c={};for(const a of g.animations)c[a.name.toLowerCase()]=a;return {idle:c.idle,walk:c.walk,run:c.run}};
- TPL.m=Object.assign(prep(man,1.78),{clips:clips(man)});TPL.f=Object.assign(prep(wom,1.66),{clips:clips(wom)});
+ TPL.m=Object.assign(prep(man,1.78),{clips:clips(man),C:mkClips(jm,man.scene)});TPL.f=Object.assign(prep(wom,1.66),{clips:clips(wom),C:mkClips(jf,wom.scene)});
  assetsReady=true;G.__ready=true;G.onLoadProgress&&G.onLoadProgress(1);setTimeout(loadDistrict,400);for(const r of pending)upgrade(r);pending.clear();
 }).catch(e=>{console.error('model load failed, using simple characters',e);G.__ready=true;setTimeout(loadDistrict,400);G.onLoadProgress&&G.onLoadProgress(1)});
 const CLOTH=/fabric|top|bottom|suit/i,SKINM=/anatomical body\.body$/i,HAIR=/short0|ponytail|afro|hair roots|eyebrow|eyelash/i,DROP=/teeth|eyelash|low-poly/i;
@@ -392,7 +396,8 @@ function upgrade(root){const u=root.userData;const L=Object.assign({id:u.look},L
  const hs=hash(u.seed),tone=.62+hash(u.seed+'s')*.4;const skin=(L.skin||[1,1,1]).map((v,i)=>v*tone*[1.0,.9,.8][i]);const hair=HAIRC[Math.floor(hash(u.seed+'h')*HAIRC.length)];
  const rm=[];obj.traverse(o=>{if(o.isMesh){if(DROP.test(o.material.name||'')){rm.push(o);return}o.material=matFor(key,o.material,L,skin,!WEAK,u.seed,hair,u.age>58);o.frustumCulled=false;o.castShadow=shadowsOn}});for(const o of rm)o.parent.remove(o);
  const bones={};obj.traverse(o=>{if(o.isBone&&BN.includes(o.name))bones[o.name]=o});
- const mixer=new THREE.AnimationMixer(obj);const act={};for(const n of ['idle','walk','run']){const a=mixer.clipAction(t.clips[n]);a.play();a.setEffectiveWeight(n==='idle'?1:0);a.time=hs*a.getClip().duration;act[n]=a}
+ const mixer=new THREE.AnimationMixer(obj);const act={};if(t.C){for(const n in t.C){const a=mixer.clipAction(t.C[n]);act[n]=a;if(ONE.has(n)){a.setLoop(THREE.LoopOnce);a.clampWhenFinished=true}}const ik=u.idleK&&act[u.idleK]?u.idleK:'idle';act[ik].play();act[ik].time=hs*act[ik].getClip().duration;root.add(obj);Object.assign(u,{mixer,act,C:1,base:ik,model:obj,bones,baseY:t.y,neck:obj.getObjectByName('neck_01')});return}
+ for(const n of ['idle','walk','run']){const a=mixer.clipAction(t.clips[n]);a.play();a.setEffectiveWeight(n==='idle'?1:0);a.time=hs*a.getClip().duration;act[n]=a}
  root.add(obj);Object.assign(u,{mixer,act,w:{idle:1,walk:0,run:0},model:obj,bones,baseY:t.y})}
 // procedural overlays (punch, sit, wave, stagger, action) applied after the mixer, in character space so they work on any rig orientation
 const _qa=new THREE.Quaternion(),_qp=new THREE.Quaternion(),_qr=new THREE.Quaternion(),_ax=new THREE.Vector3();
@@ -412,11 +417,33 @@ function animate(ch,speed,dt,now,detail){const u=ch.userData;u.sitW+=((u.sit?1:0
  if(dist>VIEW){ch.visible=false;return}ch.visible=true;
  if(u.blob)u.blob.visible=!!detail;if(!u.mixer||!detail){u.far.visible=true;if(u.model)u.model.visible=false;u.far.position.y=u.sit?.5:.85;return}
  u.far.visible=false;u.model.visible=true;
+ if(u.C){animClips(ch,u,speed,dt,now,dist);return}
  const sp=u.sit?0:speed,tgt={idle:sp<0.3?1:0,walk:sp>=0.3&&sp<5.5?1:0,run:sp>=5.5?1:0};const k=Math.min(1,dt*6);
  for(const n in tgt){u.w[n]+=(tgt[n]-u.w[n])*k;u.act[n].setEffectiveWeight(u.w[n])}
  u.act.walk.timeScale=Math.max(.6,Math.min(1.5,sp/2.6));u.act.run.timeScale=Math.max(.8,Math.min(1.3,sp/6.5));
  u.acc+=dt;const every=dist>40?0.1:dist>20?0.033:0;if(u.acc>=every){u.mixer.update(u.acc);u.acc=0}
  overlays(ch,now)}
+
+// ---------- clip-driven animation (Quaternius UAL CC0 mocap retargeted to our rigs) ----------
+const ONE=new Set(['jab','cross','hit','hitH','wave','sitIn','sitOut','bat','yes','no','hook']);
+const _nq=new THREE.Quaternion(),_nq2=new THREE.Quaternion(),_up=new THREE.Vector3(0,1,0);
+function playOne(u,n,cap){const a=u.act[n];if(!a)return;if(u.one&&u.one!==a)u.one.fadeOut(.1);const b=u.act[u.base];if(b)b.fadeOut(.12);a.enabled=true;a.reset().setEffectiveWeight(1).fadeIn(.1).play();u.one=a;u.oneEnd=performance.now()+Math.min(cap||9,a.getClip().duration-.15)*1000/(G.__animSlow||1)}
+function setBase(u,n){if(!u.act[n]||n===u.base)return;const o=u.act[u.base],a=u.act[n];a.enabled=true;a.reset().setEffectiveWeight(1);if(!u.one)a.fadeIn(.25);else a.setEffectiveWeight(0);a.play();if(o&&!u.one)o.fadeOut(.25);else if(o)o.stop();u.base=n}
+function animClips(ch,u,speed,dt,now,dist){const sp=u.sit?0:speed,fx=u.fx;u.seen=u.seen||{};
+ const drive=now-(u.driveT||-9e9)<400;if(sp>.3||u.sit||drive)u.dance=false;
+ let ry=ch.rotation.y,dr=Math.atan2(Math.sin(ry-(u.lry||ry)),Math.cos(ry-(u.lry||ry)))/Math.max(dt,.001);u.lry=ry;
+ let base=drive?'drive':u.sit?'sit':sp<.3?(u.dance?'dance':Math.abs(dr)>1.6?(u.walkK||'walk'):(u.idleK||'idle')):sp<2.4?(u.walkK||'walk'):sp<5.2?'jog':'run';
+ if(u.sit&&!u.wasSit&&u.act.sitIn){u.wasSit=1;setBase(u,'sit');playOne(u,'sitIn')}else if(!u.sit&&u.wasSit){u.wasSit=0;setBase(u,base);if(u.act.sitOut&&sp<.3)playOne(u,'sitOut')}
+ setBase(u,base);const a=u.act[base];
+ if(base==='walk'||base==='walkF')a.timeScale=sp<.3?.7:Math.max(.5,Math.min(1.8,sp/1.45));else if(base==='jog')a.timeScale=Math.max(.6,Math.min(1.6,sp/3.4));else if(base==='run')a.timeScale=Math.max(.7,Math.min(1.5,sp/6.2));else a.timeScale=1;
+ const ev=(k,f)=>{if(fx[k]>(u.seen[k]||-1)&&now-fx[k]<600){u.seen[k]=fx[k];f()}};
+ ev('punch',()=>{u.pc=(u.pc||0)+1;playOne(u,u.pc%3===0?'hook':u.pc%2?'jab':'cross')});ev('hit',()=>playOne(u,Math.random()<.5?'hit':'hitH'));
+ ev('wave',()=>playOne(u,'wave',2.2));ev('act',()=>playOne(u,u.role==='kid'?'bat':'yes'));ev('bat',()=>playOne(u,'bat'));ev('talk',()=>playOne(u,'talk',2.6));ev('dance',()=>{u.dance=true});
+ if(u.one&&now>u.oneEnd){u.one.fadeOut(.2);u.one=null;const b=u.act[u.base];b.enabled=true;b.setEffectiveWeight(1).fadeIn(.2).play()}
+ u.model.position.y=u.baseY-(u.sit&&!u.onBench?.42:0);
+ u.acc+=dt*(G.__animSlow||1);const every=dist>40?0.1:dist>20?0.033:0;if(u.acc>=every){u.mixer.update(u.acc);u.acc=0}
+ if(u.lookAt&&u.neck&&!u.sit&&!u.one&&dist<25){const lx=u.lookAt.x-ch.position.x,lz=u.lookAt.z-ch.position.z;let yaw=Math.atan2(lx,lz)-ry;yaw=Math.atan2(Math.sin(yaw),Math.cos(yaw));if(Math.abs(yaw)<1.6){u.ly=(u.ly||0)+(Math.max(-1,Math.min(1,yaw))-(u.ly||0))*Math.min(1,dt*4)}else u.ly=(u.ly||0)*(1-Math.min(1,dt*4))}else u.ly=(u.ly||0)*(1-Math.min(1,dt*4));
+ if(u.neck&&Math.abs(u.ly||0)>.01){const n=u.neck;n.parent.getWorldQuaternion(_nq);_nq2.setFromAxisAngle(_up,u.ly);n.quaternion.premultiply(_nq.clone().invert().multiply(_nq2).multiply(_nq))}}
 // look picker
 G.openLookPicker=function(cur,onPick){let el=document.getElementById('lookPick');if(el)el.remove();el=document.createElement('div');el.id='lookPick';
  el.style.cssText='position:fixed;inset:0;z-index:40;background:rgba(20,22,40,.72);overflow-y:auto;padding:16px;touch-action:pan-y';
@@ -479,7 +506,7 @@ function tap(e){v2.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ra
 // ---------- other players + bots ----------
 const others=new Map();
 G.onPoses=list=>{const t=performance.now();for(const p of list){if(G.ME&&p.id===G.ME.id)continue;let o=others.get(p.id);
- if(!o||o.g!==p.g||o.l!==(p.l||'normal')){if(o)scene.remove(o.ch);const ch=makeChar(p.g,p.r?p.n:(p.b?'🤖 ':'')+p.n+' · '+p.a,p.l,p.id,p.a,p.b);ch.userData.pid=p.id;ch.userData.role=p.r;if(p.a<13)ch.scale.setScalar(.68);ch.position.set(p.x,0,p.z);o={ch,r:p.r,g:p.g,l:p.l||'normal',n:p.n,b:p.b,tx:p.x,tz:p.z,ry:p.ry,seen:t,sp:0};others.set(p.id,o)}
+ if(!o||o.g!==p.g||o.l!==(p.l||'normal')){if(o)scene.remove(o.ch);const ch=makeChar(p.g,p.r?p.n:(p.b?'🤖 ':'')+p.n+' · '+p.a,p.l,p.id,p.a,p.b);ch.userData.pid=p.id;ch.userData.role=p.r;ch.userData.idleK=p.r==='shop'||p.r==='teacher'?'phone':p.r==='elder'?'idle2':(!p.r&&hash(p.id+'i')<.15)?'phone':null;if(p.a<13)ch.scale.setScalar(.68);ch.position.set(p.x,0,p.z);o={ch,r:p.r,g:p.g,l:p.l||'normal',n:p.n,b:p.b,tx:p.x,tz:p.z,ry:p.ry,seen:t,sp:0};others.set(p.id,o)}
  const dt=Math.max(.05,(t-(o.last||t-200))/1000);o.vel=Math.hypot(p.x-o.tx,p.z-o.tz)/dt;o.last=t;
  o.tx=p.x;o.tz=p.z;o.ry=p.ry;o.seen=t;o.ch.userData.sit=p.s?1:0;o.ch.userData.onBench=p.s&&TW.BENCH.some(b=>Math.hypot(b[0]-p.x,b[1]-p.z)<.3)}};
 // ---------- drivable vehicles ----------
@@ -525,7 +552,7 @@ function drive(dt,now){const q=VM.get(DRV.id);if(!q)return;const mx=VMAX[q.k];le
  P.x=q.o.position.x;P.z=q.o.position.z;P.ry=DRV.ry;SND.engine&&SND.engine(Math.abs(DRV.spd)/mx,true);
  if(now-drvSent>110&&G.S){drvSent=now;G.S({t:'drv',x:+P.x.toFixed(2),z:+P.z.toFixed(2),ry:+Math.atan2(Math.sin(P.ry),Math.cos(P.ry)).toFixed(2)})}
  let d=(DRV.ry+Math.PI)-yaw;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;yaw+=d*Math.min(1,dt*3)}
-function seatChar(ch,q){ch.position.set(q.o.position.x,q.k==='car'?.1:.35,q.o.position.z);ch.rotation.y=q.o.rotation.y;ch.userData.sit=1;ch.userData.onBench=1}
+function seatChar(ch,q){ch.position.set(q.o.position.x,q.k==='car'?.1:.35,q.o.position.z);ch.rotation.y=q.o.rotation.y;const U=ch.userData;if(U.C){U.sit=0;U.driveT=performance.now();ch.position.y=q.k==='car'?-.35:.05}else{U.sit=1;U.onBench=1}}
 // ---------- minimap ----------
 const mm=$('mm'),mx=mm.getContext('2d'),MMS=mm.width,MMK=MMS/(2*(H+8));const mmBg=document.createElement('canvas');mmBg.width=mmBg.height=MMS;
 {const x=mmBg.getContext('2d'),f=v=>(v+H+8)*MMK;x.fillStyle='#8fc46f';x.fillRect(0,0,MMS,MMS);x.fillStyle='#555a63';for(const r of R){x.fillRect(f(r-4),0,8*MMK+1,MMS);x.fillRect(0,f(r-4),MMS,8*MMK+1)}
@@ -586,7 +613,8 @@ function frame(now){requestAnimationFrame(frame);const dt=Math.min(0.05,(now-las
  const list=[];for(const [id,o] of others){if(now-o.seen>4500){scene.remove(o.ch);others.delete(id);continue}list.push(o);o.dist=Math.hypot(o.tx-P.x,o.tz-P.z)}
  list.sort((a,b)=>a.dist-b.dist);const maxFull=MAXF;let near=null;
  list.forEach((o,i)=>{const ch=o.ch,k=Math.min(1,dt*6),ox=ch.position.x,oz=ch.position.z;ch.position.x+=(o.tx-ox)*k;ch.position.z+=(o.tz-oz)*k;let d=o.ry-ch.rotation.y;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;ch.rotation.y+=d*k;
-  const sp=Math.hypot(o.tx-ox,o.tz-oz)>.05?Math.min(9,o.vel||0):0;animate(ch,sp,dt,now,i<maxFull&&o.dist<32);if(alive&&o.dist<3.5&&!near)near=o});
+  const sp=Math.hypot(o.tx-ox,o.tz-oz)>.05?Math.min(9,o.vel||0):0;ch.userData.lookAt=o.dist<6?P:null;animate(ch,sp,dt,now,i<maxFull&&o.dist<32);if(alive&&o.dist<3.5&&!near)near=o});
+ if(me)me.userData.lookAt=near?near.ch.position:null;
  if(near&&!G.PANEL){if(meetId!==near.ch.userData.pid){meetId=near.ch.userData.pid;meet.textContent='👋 '+near.n+' से बात करो'}meet.style.display='block'}else{meet.style.display='none';meetId=null}
  // floats
  for(let i=floats.length-1;i>=0;i--){const f=floats[i],a=(now-f.t0)/f.life;if(a>=1||!f.obj.parent){scene.remove(f.sp);f.sp.material.map.dispose();f.sp.material.dispose();floats.splice(i,1);continue}

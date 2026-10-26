@@ -164,6 +164,7 @@ const H={
   p.cd[k]=t+ACT_CD;mark();send(socks.get(p.id),{t:'gain',text:g.join('  '),cd:p.cd});pushMe(p);bcast({t:'fx',k:'act',id:p.id})},
  dlg(p,m){onDlg(p,m)},
  wanted(p,m){if(!p.admin)return;setWanted(p,Number(m.n)||0,'admin')},
+ emote(p,m){const k=['dance','wave'].includes(m.k)?m.k:null;if(!k||!POS.get(p.id))return;const t=now();if(p.emT&&t-p.emT<1500)return;p.emT=t;bcast({t:'fx',k,id:p.id})},
  talk(p,m){if(p.state!=='alive'||!p.life)return;const a=POS.get(p.id),b=POS.get(m.to)||(BOTS.find(x=>x.id===m.to)||null);if(!a||!b||Math.hypot(a.x-b.x,a.z-b.z)>4)return err(p,'पास जाकर बात करो');
   p.cd=p.cd||{};const t=now();if(!p.admin&&p.cd.talk&&t<p.cd.talk)return err(p,'थोड़ा रुको');p.cd.talk=t+ACT_CD;p.life.r=E.cl(p.life.r+3);p.life.j=E.cl(p.life.j+1);
   mark();send(socks.get(p.id),{t:'gain',text:'+3 रिश्ते 🤝  +1 खुशी',cd:p.cd});pushMe(p);bcast({t:'fx',k:'wave',id:p.id});
@@ -275,7 +276,7 @@ function roleTick(dt){const ph=dayPhase(),t=now();
    const st=Math.min(d,b.sp*dt);b.x+=dx/d*st;b.z+=dz/d*st;b.ry=Math.atan2(dx,dz);b.ch=true;continue}
   if(si<0)continue;const s=b.sched[si],mode=s[3];b.idleT-=dt;if(b.idleT>0)continue;b.idleT=4+Math.random()*6;
   const pl=nearPlayer(b.x,b.z,22);
-  if(mode==='cricket'){const a=Math.random()*6.28;b.route=[[s[2][0]+Math.cos(a)*4,s[2][1]+Math.sin(a)*3]];if(pl&&Math.random()<.3)botSay(b,pickL(ROLES[b.role].call));b.idleT=1.5+Math.random()*2;continue}
+  if(mode==='cricket'){if(Math.random()<.4)bcast({t:'fx',k:'bat',id:b.id});const a=Math.random()*6.28;b.route=[[s[2][0]+Math.cos(a)*4,s[2][1]+Math.sin(a)*3]];if(pl&&Math.random()<.3)botSay(b,pickL(ROLES[b.role].call));b.idleT=1.5+Math.random()*2;continue}
   if(mode==='walk'){const a=Math.random()*6.28;b.route=[[s[2][0]+Math.cos(a)*8,s[2][1]+Math.sin(a)*6]];continue}
   if(mode==='wander'){b.route=[[s[2][0]+(Math.random()-.5)*14,s[2][1]+(Math.random()-.5)*8]];continue}
   if(mode==='bench'){const bn=T.BENCH.find(q=>Math.hypot(q[0]-s[2][0],q[1]-s[2][1])<1);if(bn&&!b.sit){b.x=bn[0];b.z=bn[1];b.ry=bn[2];b.sit=true;b.wait=30;b.ch=true}continue}
