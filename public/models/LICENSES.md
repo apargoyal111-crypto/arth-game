@@ -18,3 +18,9 @@ Earlier Mixamo-derived models (soldier/michelle/Xbot) were never committed to th
 - Indian everyday outfits (कुर्ता-पजामा, शर्ट-पैंट, सलवार-कमीज़, साड़ी colours), stripe/check/booti print patterns, wider Indian skin-tone range, hair colours (grey for older people) are all runtime shader recolours of the same CC0 models — no new assets.
 - Punch, sit, wave, stagger and action poses are procedural bone rotations in code (no extra animation files).
 - `town.js` layout, all buildings, props and textures are generated in code (no image or model assets).
+
+## Premium + driving update
+- Sounds (ambience, birds, crickets, market murmur, music pad, clicks, footsteps, punch, horn, engine) are synthesised at runtime with WebAudio in `public/audio.js`, so there are no audio files.
+- Vehicles (car, auto-rickshaw, scooter) are procedural low-poly meshes in code.
+- Window glow, water ripple, contact-shadow and particle textures are canvas-generated.
+- Font: Mukta from Google Fonts (SIL Open Font License 1.1), loaded from fonts.googleapis.com.

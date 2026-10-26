@@ -31,5 +31,7 @@ Z.forEach(function(z){var d=node(z.door[0],z.door[1]),p=node(z.x,z.z);z.node=p;
  link(gi[(z.bx-30)+','+(z.bz+30)],d);link(gi[(z.bx+30)+','+(z.bz+30)],d);link(d,p)});
 BENCH.forEach(function(b,i){var best=-1,bd=1e9;Z.forEach(function(z){var d=Math.hypot(z.x-b[0],z.z-b[1]);if(d<bd){bd=d;best=z.node}});
  if(bd<30){var n=node(b[0],b[1]+1);b.node=n;link(n,best)}});
-return {HALF:HALF,RW:RW,ROADS:ROADS,HWY:HWY,ZONES:Z,ACT:ACT,BENCH:BENCH,NODES:N,EDGES:E};
+// parked vehicles (on footpath edge near landmarks): id,kind,x,z,ry
+var VEH=[];var K=['car','auto','scooter'];Z.forEach(function(z,i){VEH.push({id:'v'+i,kind:K[i%3],x:z.door[0]+9,z:z.door[1]-3,ry:Math.PI/2})});
+return {VEH:VEH,HALF:HALF,RW:RW,ROADS:ROADS,HWY:HWY,ZONES:Z,ACT:ACT,BENCH:BENCH,NODES:N,EDGES:E};
 });

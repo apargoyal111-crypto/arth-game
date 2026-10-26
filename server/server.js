@@ -173,6 +173,10 @@ const H={
   for(const c of cand){if(c.id===p.id)continue;const dx=c.x-a.x,dz=c.z-a.z,d=Math.hypot(dx,dz);if(d<bd&&d>0.01&&(dx*fx+dz*fz)/d>0.4){bd=d;best=c}}
   if(!best)return;const dx=(best.x-a.x)/bd,dz=(best.z-a.z)/bd;bcast({t:'fx',k:'hit',id:best.id,from:p.id,dx:+dx.toFixed(2),dz:+dz.toFixed(2)});
   if(best.bot)return botHit(best.bot,p,dx,dz);const v=db.players[best.id];if(v&&v.life&&v.state==='alive'){v.life.h=Math.max(10,v.life.h-2);sendTo(v.id,{t:'gain',text:'-2 सेहत 🤕 ('+p.name+' का पंच)'});pushMe(v)}},
+ enter(p,m){const v=VEHS.find(x=>x.id===m.v),a=POS.get(p.id);if(!v||!a)return;if(VEHS.some(x=>x.driver===p.id))return err(p,'पहले उतरो');
+  if(v.driver&&v.driver!==p.id)return err(p,'इसे कोई और चला रहा है');if(Math.hypot(a.x-v.x,a.z-v.z)>4)return err(p,'गाड़ी के पास जाओ');
+  v.driver=p.id;v.t=now();v.used=now();v.ch=true;send(socks.get(p.id),{t:'drive',v:v.id,ok:true});pushVehs(true)},
+ exit(p){const v=VEHS.find(x=>x.driver===p.id);if(!v)return;v.driver=null;v.used=now();v.ch=true;send(socks.get(p.id),{t:'drive',v:v.id,ok:false});pushVehs(true)},
  ping(p){send(socks.get(p.id),{t:'pong'})}
 };
 function divorce(p){const s=db.players[p.spouse];p.spouse=null;if(s){s.spouse=null;if(s.life){s.life.married=false;s.life.partner='';s.life.j=E.cl(s.life.j-15)}pushMe(s);feed('💔 '+p.name+' और '+s.name+' का तलाक हो गया।','info')}}
@@ -183,7 +187,7 @@ function notif(p,text){send(socks.get(p.id),{t:'notif',text})}
 const MAP=Number(env.MAP_HALF)||T.HALF;const POS=new Map(); // id -> {x,z,ry,t,ch}
 function onPos(p,m){const t=now(),o=POS.get(p.id);if(o&&t-o.t<90)return; // ~10/s max per player
  const f=(v,a)=>{v=Number(v);return Number.isFinite(v)?Math.max(-a,Math.min(a,v)):0};
- let ry=Number(m.ry);ry=Number.isFinite(ry)?Math.atan2(Math.sin(ry),Math.cos(ry)):0;POS.set(p.id,{x:Math.round(f(m.x,MAP)*100)/100,z:Math.round(f(m.z,MAP)*100)/100,ry:Math.round(ry*100)/100,s:m.s?1:0,t,ch:true})}
+ let ry=Number(m.ry);ry=Number.isFinite(ry)?Math.atan2(Math.sin(ry),Math.cos(ry)):0;POS.set(p.id,{x:Math.round(f(m.x,MAP)*100)/100,z:Math.round(f(m.z,MAP)*100)/100,ry:Math.round(ry*100)/100,s:m.s===2?2:m.s?1:0,t,ch:true})}
 let fullAt=0;
 setInterval(()=>{const t=now(),full=t-fullAt>1500;if(full)fullAt=t;const list=[];
  for(const [id,o] of POS){if(!isOnline(id)){POS.delete(id);continue}const p=db.players[id];if(!p)continue;if(!o.ch&&!full)continue;o.ch=false;
@@ -223,6 +227,21 @@ function botTick(dt){for(const b of BOTS){
 let botLast=now();setInterval(()=>{const t=now();botTick(Math.min(1,(t-botLast)/1000));botLast=t},200).unref();
 setInterval(()=>{if(BOTS.length&&socks.size&&Math.random()<.5){const b=pickL(BOTS);botSay(b,pickL(BOT_IDLE))}},9000).unref();
 
+// ---------- drivable vehicles (server-authoritative owner + speed-limited position) ----------
+const VMAX={car:18,auto:12,scooter:14},VEH_RESPAWN_MS=Number(env.VEH_RESPAWN_MS)||300000;
+const VEHS=T.VEH.map(v=>({id:v.id,kind:v.kind,x:v.x,z:v.z,ry:v.ry,home:[v.x,v.z,v.ry],driver:null,t:0,used:0,ch:true}));
+function vehView(v){return {id:v.id,k:v.kind,x:+v.x.toFixed(2),z:+v.z.toFixed(2),ry:+v.ry.toFixed(2),d:v.driver}}
+let vehFull=0;function pushVehs(force){const t=now();const full=force||t-vehFull>1500;if(full)vehFull=t;const list=VEHS.filter(v=>full||v.ch).map(v=>{v.ch=false;return vehView(v)});if(list.length&&socks.size)bcast({t:'vehs',list})}
+setInterval(()=>pushVehs(false),125).unref();
+function onDrive(p,m){const v=VEHS.find(x=>x.driver===p.id);if(!v)return;const t=now();if(t-v.t<60)return;const f=Number(m.x),g=Number(m.z);if(!Number.isFinite(f)||!Number.isFinite(g))return;
+ const dt=Math.min(1,(t-v.t)/1000),max=VMAX[v.kind]*dt*1.25+.3;let dx=f-v.x,dz=g-v.z;const d=Math.hypot(dx,dz);if(d>max){dx*=max/d;dz*=max/d}
+ v.x=Math.max(-T.HALF,Math.min(T.HALF,v.x+dx));v.z=Math.max(-T.HALF,Math.min(T.HALF,v.z+dz));let ry=Number(m.ry);v.ry=Number.isFinite(ry)?Math.atan2(Math.sin(ry),Math.cos(ry)):v.ry;v.t=t;v.used=t;v.ch=true;
+ const o=POS.get(p.id);if(o){o.x=v.x;o.z=v.z;o.ry=v.ry;o.s=2;o.ch=true}
+ if(d>.05){for(const b of BOTS)if(Math.hypot(b.x-v.x,b.z-v.z)<2.2){const ax=b.x-v.x,az=b.z-v.z,l=Math.hypot(ax,az)||1;b.x+=ax/l*2;b.z+=az/l*2;b.sit=false;b.path=null;b.tgt=null;b.wait=1;b.ch=true;if(Math.random()<.3)botSay(b,pickL(['अरे! गाड़ी देख के! 🚗','ओ भाई, हॉर्न तो बजाओ!','हटो हटो! 😅']))}
+  for(const [id,q] of POS)if(id!==p.id&&q.s!==2&&Math.hypot(q.x-v.x,q.z-v.z)<2){const ax=q.x-v.x,az=q.z-v.z,l=Math.hypot(ax,az)||1;sendTo(id,{t:'fx',k:'push',id,dx:+(ax/l).toFixed(2),dz:+(az/l).toFixed(2)})}}}
+setInterval(()=>{const t=now();for(const v of VEHS){if(v.driver&&!isOnline(v.driver)){v.driver=null;v.used=t;v.ch=true}
+ if(!v.driver&&v.used&&t-v.used>VEH_RESPAWN_MS&&Math.hypot(v.x-v.home[0],v.z-v.home[1])>1){[v.x,v.z,v.ry]=v.home;v.used=0;v.ch=true}}},2000).unref();
+
 // ---------- HTTP + WS ----------
 const app=express();app.disable('x-powered-by');
 app.use(require('compression')()); // gzip text assets (three.js ~2 MB -> ~0.45 MB)
@@ -242,6 +261,7 @@ wss.on('connection',(ws,req)=>{
  ws.on('message',raw=>{
   if(me&&socks.get(me.id)!==ws)me=null; // replaced by a newer login elsewhere: this socket no longer speaks for the player
   if(raw.length<200&&me&&String(raw).indexOf('"pos"')>0){let m;try{m=JSON.parse(raw)}catch(e){return}if(m&&m.t==='pos'){ws.alive=true;return onPos(me,m)}}
+  if(raw.length<200&&me&&String(raw).indexOf('"drv"')>0){let m;try{m=JSON.parse(raw)}catch(e){return}if(m&&m.t==='drv'){ws.alive=true;return onDrive(me,m)}}
   const b=ws.bucket,t=now();b.n=Math.min(RATE_BURST,b.n+(t-b.t)/1000*RATE);b.t=t;if(b.n<1)return send(ws,{t:'err',text:'बहुत तेज़! थोड़ा धीरे।'});b.n--;
   let m;try{m=JSON.parse(raw)}catch(e){return}if(!m||typeof m.t!=='string')return;ws.alive=true;
   try{
@@ -257,7 +277,7 @@ wss.on('connection',(ws,req)=>{
     const old=socks.get(p.id);if(old&&old!==ws){socks.delete(p.id);send(old,{t:'err',text:'दूसरी जगह से लॉगिन हुआ'});try{old.close()}catch(e){}}
     me=p;ws.pid=p.id;socks.set(p.id,ws);
     send(ws,{t:'auth',token:p.token,id:p.id,ice:ICE,cfg:{pregMs:PREG_MS,turnMs:TURN_MS,scale:SCALE}});
-    pushMe(p);send(ws,{t:'world',w:worldView()});pushPlayers();return}
+    pushMe(p);send(ws,{t:'world',w:worldView()});pushPlayers();send(ws,{t:'vehs',list:VEHS.map(vehView)});return}
    if(m.t==='admin'){const K=String(env.ADMIN_KEY||''),k=String(m.key||'');
     if(!me||!K||k.length!==K.length||!crypto.timingSafeEqual(Buffer.from(k),Buffer.from(K)))return send(ws,{t:'err',text:'गलत एडमिन कुंजी'});
     me.admin=true;mark();if(me.state==='preg'){startLife(me);pushPlayers()}pushMe(me);return send(ws,{t:'err',text:'👑 स्पेशल एक्सेस चालू!'})}
