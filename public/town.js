@@ -25,7 +25,9 @@ var Z=[
  {id:'mall',n:'🎬 मॉल-सिनेमा',bx:-30,bz:213,act:'rest',col:'#9fb8d8',h:16,big:1},
  {id:'walkst',n:'🌃 वॉकिंग स्ट्रीट',bx:100,bz:213,act:'rest',open:1,big:1},
  {id:'beach',n:'🏖️ बीच',bx:180,bz:0,act:'rest',open:1,big:1},
- {id:'pier',n:'⚓ जेटी',bx:180,bz:-90,act:'rest',open:1}
+ {id:'pier',n:'⚓ जेटी',bx:180,bz:-90,act:'rest',open:1},
+ {id:'showroom',n:'🏎️ लक्ज़री शोरूम',bx:-30,bz:-213,act:'rest',col:'#eceff1',h:9,big:1},
+ {id:'gunshop',n:'🎯 गन शॉप · रेंज',bx:-213,bz:-213,act:'rest',col:'#5d4037',h:6,big:1}
 ];
 Z.forEach(function(z){if(z.bx>=170){z.x=z.bx;z.z=z.bz;z.door=[160,z.bz]}else{z.x=z.bx;z.z=z.bz+20;z.door=[z.bx,z.bz+30]}});
 var ACT={study:{b:'📚 पढ़ाई करो'},work:{b:'💼 काम करो'},heal:{b:'💊 इलाज कराओ'},rest:{b:'🙏 आराम करो'},sport:{b:'⚽ खेलो'}};

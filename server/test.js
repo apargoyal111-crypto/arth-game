@@ -4,7 +4,7 @@ const {spawn}=require('child_process');const WebSocket=require('ws');const path=
 const T=require('../public/town.js');
 const PORT=3999,DATA=path.join(os.tmpdir(),'arth-test-'+Date.now()+'.json');
 fs.writeFileSync(DATA,JSON.stringify({players:{old1:{id:'old1',token:'tokold',name:'पुराना',g:'m',state:'dead',life:null,lives:[{age:71,score:5}],friends:[],friendReq:[],proposals:[],activeMs:0,lastTurnMs:0}}}));
-const srv=spawn(process.execPath,['server.js'],{cwd:__dirname,env:Object.assign({},process.env,{GEMINI_API_KEY:'',LLM_API_KEY:'',PORT,DATA_FILE:DATA,TIME_SCALE:'20000',TURN_SECONDS:'60000',WORLD_DAY_SECONDS:'2000',RATE_PER_SEC:'300',RATE_BURST:'60',HEARTBEAT_MS:'3000',ACT_COOLDOWN_MS:'800',BOTS:'6',VEH_RESPAWN_MS:'600000',NPC_PHASE:'0.5',JAIL_BASE_MS:'2000',WANTED_DECAY_MS:'1000',CRIME_COOL_MS:'1500',ADMIN_KEY:'testkey123'}),stdio:['ignore','pipe','pipe']});
+const srv=spawn(process.execPath,['server.js'],{cwd:__dirname,env:Object.assign({},process.env,{GEMINI_API_KEY:'',LLM_API_KEY:'',LIC_FEE:'100',GUN_PRICE:'100',PORT,DATA_FILE:DATA,TIME_SCALE:'20000',TURN_SECONDS:'60000',WORLD_DAY_SECONDS:'2000',RATE_PER_SEC:'300',RATE_BURST:'60',HEARTBEAT_MS:'3000',ACT_COOLDOWN_MS:'800',BOTS:'6',VEH_RESPAWN_MS:'600000',NPC_PHASE:'0.5',JAIL_BASE_MS:'2000',WANTED_DECAY_MS:'1000',CRIME_COOL_MS:'1500',ADMIN_KEY:'testkey123'}),stdio:['ignore','pipe','pipe']});
 let srvOut='';srv.stdout.on('data',d=>srvOut+=d);srv.stderr.on('data',d=>srvOut+=d);
 let crashed=false;srv.on('exit',c=>{crashed=c!==null&&c!==0});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -128,14 +128,33 @@ const Z=id=>T.ZONES.find(z=>z.id===id);
  console.log('7. migration + level');const O=new Cl('O');await O.open('tokold');await O.wait(m=>m.t==='me');ok(O.me.state==='alive'&&!!O.me.life&&O.me.lvl>=1,'old dead/aged account loads fine as adult');O.ws.close();
  A.send({t:'admin',key:'testkey123'});await sleep(200);A.send({t:'lines'});const ln=await A.wait(m=>m.t==='lines',3000).catch(()=>null);ok(!!ln&&ln.f.length>3&&ln.f.every(s=>/[\u0900-\u097F]/.test(s)&&!/^[\x00-\x7F\s]+$/.test(s)),'female NPC lines all Devanagari ('+(ln&&ln.f.length)+')');
  const C=new Cl('C');await C.open();C.send({t:'signup',name:'चिंटू',g:'m'});await C.wait(m=>m.t==='me');
+ console.log('9. showroom, garage, call-car, traffic, carjack, licence, guns');{
+  const sr=T.ZONES.find(z=>z.id==='showroom');C.send({t:'pos',x:sr.bx,z:sr.bz+10,ry:0});await sleep(200);C.send({t:'garage'});const gr=await C.wait(m=>m.t==='garage',3000);ok(gr.cat.length>=4&&gr.cat.some(c=>c.k==='super'),'showroom catalogue (fictional brands, super cars)');
+  C.send({t:'buyCar',m:'garud'});ok(!!(await C.wait(m=>m.t==='err',3000).catch(()=>null)),'cannot buy without money');
+  C.clear();C.send({t:'buyCar',m:'vayu'});const g2=await C.wait(m=>m.t==='garage',3000);ok(g2.list.length===1&&g2.list[0].m==='vayu','buy car -> in garage');
+  const vid=g2.list[0].id;const B2=new Cl('B2');await B2.open();B2.send({t:'signup',name:'राहुल',g:'m'});await B2.wait(m=>m.t==='me');const vv=await B2.wait(m=>m.t==='vehs'&&m.list.some(v=>v.id===vid),4000).then(m=>m.list.find(v=>v.id===vid));
+  B2.send({t:'pos',x:vv.x+1,z:vv.z,ry:0});await sleep(200);B2.clear();B2.send({t:'enter',v:vid});const e2=await B2.wait(m=>m.t==='err'||m.t==='drive',3000);ok(e2.t==='err','owner-only driving: others cannot drive my car');
+  C.send({t:'pos',x:-60,z:40,ry:0});await sleep(200);C.clear();C.send({t:'callCar'});const cc=await C.wait(m=>m.t==='callcar',3000);ok(Math.hypot(cc.x+60,cc.z-40)<6,'call-car brings my car to me');
+  C.send({t:'enter',v:vid});ok((await C.wait(m=>m.t==='drive',3000)).ok,'owner can drive own car');C.send({t:'exit'});await C.wait(m=>m.t==='drive');
+  let tr=null;const t1=Date.now();while(!tr&&Date.now()-t1<6000){const m=await B2.wait(m=>m.t==='vehs',2000).catch(()=>null);if(m)tr=m.list.find(v=>v.n&&v.k!=='police')}ok(!!tr,'NPC traffic spawns near players');
+  const trs=new Set();const t2=Date.now();while(Date.now()-t2<2000){const m=await B2.wait(m=>m.t==='vehs',1500).catch(()=>null);if(m)m.list.filter(v=>v.n).forEach(v=>trs.add(v.id))}ok(trs.size>=8&&trs.size<=40,'traffic count in range ('+trs.size+')');
+  const sv=await B2.wait(m=>m.t==='vehs'&&m.list.some(v=>v.n&&v.k!=='police'),3000).then(m=>m.list.find(v=>v.n&&v.k!=='police'));B2.send({t:'pos',x:sv.x+1,z:sv.z,ry:0});await sleep(100);B2.clear();B2.send({t:'enter',v:sv.id});
+  const jw=await B2.wait(m=>m.t==='wanted'||m.t==='err',3000);ok(jw.t==='wanted'&&jw.n===(sv.k==='super'?2:1),'carjacking -> wanted '+(sv.k==='super'?'+2 (super)':'+1'));
+  B2.send({t:'garage'});const g3=await B2.wait(m=>m.t==='garage',3000);ok(g3.list.length===0,'stolen car NOT added to garage');B2.send({t:'exit'});
+  C.send({t:'pos',x:-213,z:-200,ry:0});await sleep(200);C.clear();C.send({t:'buyGun'});ok(/लाइसेंस/.test((await C.wait(m=>m.t==='err',3000)).text||''),'gun needs licence');
+  B2.send({t:'pos',x:-30,z:-25,ry:0});await sleep(200);B2.clear();B2.send({t:'licence'});ok(!!(await B2.wait(m=>m.t==='err',3000).catch(()=>null)),'no licence while wanted');B2.ws.close();
+  C.send({t:'pos',x:-30,z:-25,ry:0});await sleep(200);C.clear();C.send({t:'licence'});const lg=await C.wait(m=>m.t==='garage',3000);ok(lg.lic,'licence from thana (fee, no-wanted check)');
+  C.send({t:'pos',x:-213,z:-200,ry:0});await sleep(200);C.clear();C.send({t:'buyGun'});const gg=await C.wait(m=>m.t==='garage',3000);ok(gg.gun,'buy rifle at gun shop');
+  C.clear();C.send({t:'fire'});ok(!!(await C.wait(m=>m.t==='range',3000).catch(()=>null)),'shooting at range gives XP');
+  C.send({t:'pos',x:10,z:10,ry:0});await sleep(400);C.clear();C.send({t:'fire'});const fw=await C.wait(m=>m.t==='wanted',3000).catch(()=>null);ok(fw&&fw.n>=1,'firing in the city -> wanted');}
  console.log('8. beach');{const BN=[...NP.values()];const sw=BN.filter(p=>/^swim/.test(p.l||''));ok(BN.some(p=>/नारियलवाला/.test(p.n))&&BN.some(p=>/लाइफ़गार्ड/.test(p.n))&&BN.filter(p=>/🏖️/.test(p.n)).length>=6,'beach NPCs present (tourists, vendor, lifeguard)');
   ok(sw.length>=5&&sw.every(p=>p.x>150),'swimwear NPCs only in the beach zone ('+sw.length+')');ok(BN.filter(p=>/नारियलवाला|कैफ़े|डांसर|गायक|जेट-स्की/.test(p.n)).every(p=>!/^swim/.test(p.l||'')),'vendors/staff/dancer keep normal clothes');
   C.send({t:'setLook',look:'swim1'});const cl=await C.wait(m=>m.t==='me'&&(m.look==='swim1'||(m.me&&m.me.look==='swim1')),3000).catch(()=>null);ok(!!cl,'player beach look accepted');C.send({t:'setLook',look:'normal'});await C.wait(m=>m.t==='me')}
  C.send({t:'admin',key:'wrong'});await C.wait(m=>m.t==='err');
- const h2=await (await fetch('http://localhost:'+PORT+'/health')).json();ok(h2.ok&&h2.players===6,'health: '+JSON.stringify(h2));
+ const h2=await (await fetch('http://localhost:'+PORT+'/health')).json();ok(h2.ok&&h2.players===7,'health: '+JSON.stringify(h2));
  const post=(u,b,k)=>fetch('http://localhost:'+PORT+u,{method:'POST',headers:{'content-type':'application/json','x-admin-key':k},body:JSON.stringify(b)}).then(async r=>({s:r.status,j:await r.json()}));
  ok((await post('/admin/owner',{name:'प्रिया'},'wrongkey!!')).s===403,'owner grant endpoint rejects bad key');const og=await post('/admin/owner',{name:B.me.name},'testkey123');ok(og.s===200&&og.j.granted===1,'owner granted by name via admin endpoint');
- const dlx=await post('/admin/delete',{name:'चिंटू'},'testkey123');const hz=await (await fetch('http://localhost:'+PORT+'/health')).json();ok(dlx.j.deleted===1&&hz.players===5,'admin delete account by name');
+ const dlx=await post('/admin/delete',{name:'चिंटू'},'testkey123');const hz=await (await fetch('http://localhost:'+PORT+'/health')).json();ok(dlx.j.deleted===1&&hz.players===6,'admin delete account by name');
  for(const c of [A,B,C])c.ws.close();await sleep(3500);ok(fs.existsSync(DATA),'world persisted');
  ok(!crashed&&srv.exitCode===null,'no server crash');ok(!/handler error/.test(srvOut),'no handler errors');
  console.log(`\nRESULT: ${pass} passed, ${fail} failed`);srv.kill();process.exit(fail?1:0);

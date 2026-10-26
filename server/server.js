@@ -188,6 +188,8 @@ const H={
   if(!best)return;if(best.bot&&best.bot.role&&ROLES[best.bot.role].police)crime(p,2,'पुलिस पर हमला');else crime(p,1,'मारपीट');const dx=(best.x-a.x)/bd,dz=(best.z-a.z)/bd;bcast({t:'fx',k:'hit',id:best.id,from:p.id,dx:+dx.toFixed(2),dz:+dz.toFixed(2)});
   if(best.bot)return botHit(best.bot,p,dx,dz);const v=db.players[best.id];if(v&&v.life&&v.state==='alive'){v.life.h=Math.max(10,v.life.h-2);sendTo(v.id,{t:'gain',text:'-2 सेहत 🤕 ('+p.name+' का पंच)'});pushMe(v)}},
  enter(p,m){const v=VEHS.find(x=>x.id===m.v),a=POS.get(p.id);if(!v||!a)return;if(VEHS.some(x=>x.driver===p.id))return err(p,'पहले उतरो');
+  if(v.owner&&v.owner!==p.id)return err(p,'🔒 ये किसी और की गाड़ी है');if(v.kind==='police'&&v.npc)return err(p,'पुलिस की गाड़ी नहीं छू सकते');
+  if(v.traffic&&!v.stolen){if(Math.hypot(a.x-v.x,a.z-v.z)>6)return err(p,'गाड़ी के पास जाओ');v.stolen=p.id;v.npc=0;v.driver=null;crime(p,v.kind==='super'?2:1,'गाड़ी छीनी');bcast({t:'fx',k:'jack',id:p.id,v:v.id})}
   if(v.driver&&v.driver!==p.id)return err(p,'इसे कोई और चला रहा है');if(Math.hypot(a.x-v.x,a.z-v.z)>4)return err(p,'गाड़ी के पास जाओ');
   v.driver=p.id;v.t=now();v.used=now();v.ch=true;send(socks.get(p.id),{t:'drive',v:v.id,ok:true});pushVehs(true)},
  exit(p){const v=VEHS.find(x=>x.driver===p.id);if(!v)return;v.driver=null;v.used=now();v.ch=true;send(socks.get(p.id),{t:'drive',v:v.id,ok:false});pushVehs(true)},
@@ -455,7 +457,7 @@ function speedCheck(p,v,speed){const t=now();if(speed<=SPEED_LIMIT[v.kind]){p.ov
 const VMAX={car:18,auto:12,scooter:14},VEH_RESPAWN_MS=Number(env.VEH_RESPAWN_MS)||300000;
 const VEHS=T.VEH.map(v=>({id:v.id,kind:v.kind,x:v.x,z:v.z,ry:v.ry,home:[v.x,v.z,v.ry],driver:null,t:0,used:0,ch:true}));
 PCAR={id:'pc1',kind:'police',npc:1,x:-58,z:-58,ry:Math.PI/2,home:[-58,-58,0],driver:'npc',t:0,used:0,ch:true,wp:1,chase:null};VEHS.push(PCAR);
-function vehView(v){return {s:v.chase?1:0,id:v.id,k:v.kind,x:+v.x.toFixed(2),z:+v.z.toFixed(2),ry:+v.ry.toFixed(2),d:v.driver}}
+function vehView(v){return {o:v.owner||undefined,c:v.col||undefined,n:v.npc&&v.kind!=='police'?1:undefined,s:v.chase?1:0,id:v.id,k:v.kind,x:+v.x.toFixed(2),z:+v.z.toFixed(2),ry:+v.ry.toFixed(2),d:v.driver}}
 let vehFull=0;function pushVehs(force){const t=now();const full=force||t-vehFull>1500;if(full)vehFull=t;const list=VEHS.filter(v=>full||v.ch).map(v=>{v.ch=false;return vehView(v)});if(list.length&&socks.size)bcast({t:'vehs',list})}
 setInterval(()=>pushVehs(false),125).unref();
 function onDrive(p,m){const v=VEHS.find(x=>x.driver===p.id);if(!v)return;const t=now();if(t-v.t<60)return;const f=Number(m.x),g=Number(m.z);if(!Number.isFinite(f)||!Number.isFinite(g))return;
@@ -464,9 +466,46 @@ function onDrive(p,m){const v=VEHS.find(x=>x.driver===p.id);if(!v)return;const t
  const o=POS.get(p.id);if(o){o.x=v.x;o.z=v.z;o.ry=v.ry;o.s=2;o.ch=true}
  if(d>.05){for(const b of BOTS)if(Math.hypot(b.x-v.x,b.z-v.z)<2.2){const ax=b.x-v.x,az=b.z-v.z,l=Math.hypot(ax,az)||1;b.x+=ax/l*2;b.z+=az/l*2;b.sit=false;b.path=null;b.tgt=null;b.wait=1;b.ch=true;if(!p.hitAt||t-p.hitAt>5000){p.hitAt=t;crime(p,1,'टक्कर मारी')}if(Math.random()<.3)botSay(b,pickL(['अरे! गाड़ी देख के! 🚗','ओ भाई, हॉर्न तो बजाओ!','हटो हटो! 😅']))}
   for(const [id,q] of POS)if(id!==p.id&&q.s!==2&&Math.hypot(q.x-v.x,q.z-v.z)<2){const ax=q.x-v.x,az=q.z-v.z,l=Math.hypot(ax,az)||1;sendTo(id,{t:'fx',k:'push',id,dx:+(ax/l).toFixed(2),dz:+(az/l).toFixed(2)})}}}
-setInterval(()=>{const t=now();for(const v of VEHS){if(v.npc)continue;if(v.driver&&!isOnline(v.driver)){v.driver=null;v.used=t;v.ch=true}
+setInterval(()=>{const t=now();for(const v of VEHS){if(v.npc||v.traffic||v.owner)continue;if(v.driver&&!isOnline(v.driver)){v.driver=null;v.used=t;v.ch=true}
  if(!v.driver&&v.used&&t-v.used>VEH_RESPAWN_MS&&Math.hypot(v.x-v.home[0],v.z-v.home[1])>1){[v.x,v.z,v.ry]=v.home;v.used=0;v.ch=true}}},2000).unref();
 
+
+// ---------- Batch 3: showroom, owned cars, call-car, NPC traffic + carjacking, licence + gun shop + range ----------
+const CARS={vayu:{n:'वायु हैचबैक',k:'car',price:1500,col:'#1e88e5'},toofan:{n:'तूफ़ान SUV',k:'car',price:9000,col:'#37474f'},bijli:{n:'बिजली GT ⚡',k:'super',price:25000,col:'#ffd600'},cheetah:{n:'चीता R 🐆',k:'super',price:60000,col:'#d50000'},garud:{n:'गरुड़ X 🦅',k:'super',price:120000,col:'#00c853'}};
+VMAX.super=VMAX.super||Math.max(VMAX.car||20,20)*1.5;
+const SHOW=ZP('showroom'),GUNZ=ZP('gunshop');const near=(p,z,r)=>{const a=POS.get(p.id);return a&&Math.hypot(a.x-z[0],a.z-z[1])<(r||30)};
+function garage(p){sendTo(p.id,{t:'garage',list:(p.cars||[]).map(c=>({id:c.id,m:c.m,n:CARS[c.m].n,k:CARS[c.m].k})),cat:Object.entries(CARS).map(([m,c])=>({m,n:c.n,k:c.k,price:c.price})),lic:!!p.lic,gun:!!p.gun})}
+function ownVeh(p,c,x,z,ry){let v=VEHS.find(q=>q.id===c.id);if(!v){v={id:c.id,kind:CARS[c.m].k,col:CARS[c.m].col,owner:p.id,x,z,ry:ry||0,home:[x,z,ry||0],driver:null,t:0,used:0,ch:true};VEHS.push(v)}return v}
+Object.assign(H,{
+ garage(p){garage(p)},
+ buyCar(p,m){const c=CARS[m.m],L=p.life;if(!c||!L)return;if(!near(p,SHOW,32))return err(p,'शोरूम पर जाओ 🏎️');p.cars=p.cars||[];if(p.cars.some(q=>q.m===m.m))return err(p,'ये गाड़ी पहले से तुम्हारी है');if(L.money<c.price)return err(p,'पैसे कम हैं (₹'+c.price+')');
+  L.money-=c.price;const car={id:'own_'+p.id.slice(0,8)+'_'+m.m,m:m.m};p.cars.push(car);mark();const v=ownVeh(p,car,SHOW[0]+6,SHOW[1]+6,Math.PI/2);v.ch=true;sendTo(p.id,{t:'gain',text:'🔑 '+c.n+' अब तुम्हारी! −₹'+c.price});pushMe(p);garage(p);pushVehs(true);feed('🏎️ '+p.name+' ने नई '+c.n+' ख़रीदी!','car')},
+ callCar(p,m){const a=POS.get(p.id);const c=(p.cars||[]).find(q=>q.id===m.id)||(p.cars||[])[0];if(!a||!c)return err(p,'तुम्हारे पास अपनी गाड़ी नहीं है — शोरूम जाओ');const v=ownVeh(p,c,a.x,a.z,a.ry);if(v.driver)return err(p,'गाड़ी अभी चल रही है');
+  const ox=Math.cos(a.ry||0)*3.5,oz=-Math.sin(a.ry||0)*3.5;v.x=Math.max(-T.HALF,Math.min(T.HALF,a.x+ox));v.z=Math.max(-T.HALF,Math.min(T.HALF,a.z+oz));v.ry=(a.ry||0)+Math.PI/2;v.used=now();v.ch=true;sendTo(p.id,{t:'callcar',id:v.id,x:v.x,z:v.z});pushVehs(true)},
+ licence(p){const L=p.life;if(!L)return;if(!near(p,[THANA[0],THANA[1]],26))return err(p,'लाइसेंस थाने से मिलता है 🚓');if(p.lic)return err(p,'लाइसेंस पहले से है');if(p.wanted)return err(p,'वांटेड रहते लाइसेंस नहीं मिलेगा ⭐');if(L.money<LIC_FEE)return err(p,'फ़ीस ₹'+LIC_FEE);
+  L.money-=LIC_FEE;p.lic=1;mark();sendTo(p.id,{t:'gain',text:'📜 हथियार लाइसेंस मिल गया −₹'+LIC_FEE});pushMe(p);garage(p)},
+ buyGun(p){const L=p.life;if(!L)return;if(!near(p,GUNZ,32))return err(p,'गन शॉप पर जाओ 🎯');if(!p.lic)return err(p,'पहले थाने से लाइसेंस लो 📜');if(p.gun)return err(p,'राइफ़ल पहले से है');if(L.money<GUN_PRICE)return err(p,'क़ीमत ₹'+GUN_PRICE);
+  L.money-=GUN_PRICE;p.gun=1;mark();sendTo(p.id,{t:'gain',text:'🎯 राइफ़ल ख़रीदी −₹'+GUN_PRICE+' (सिर्फ़ रेंज पर चलाएँ)'});pushMe(p);garage(p)},
+ fire(p,m){const a=POS.get(p.id);if(!a||!(p.gun||p.admin))return;const t=now();if(p.lastFire&&t-p.lastFire<350)return;p.lastFire=t;bcast({t:'fx',k:'shot',id:p.id,x:+a.x.toFixed(1),z:+a.z.toFixed(1),ry:+(a.ry||0).toFixed(2)});
+  if(near(p,GUNZ,40)){if(!p.rangeAt||t-p.rangeAt>3000){p.rangeAt=t;addXp(p,2);sendTo(p.id,{t:'range',hit:Math.random()<.7})}return}
+  if(!p.admin&&Math.hypot(a.x,a.z)<T.INNER+10&&(!p.fireCrime||t-p.fireCrime>8000)){p.fireCrime=t;crime(p,1,'शहर में गोली चलाई')}}});
+const LIC_FEE=Number(env.LIC_FEE)||2000,GUN_PRICE=Number(env.GUN_PRICE)||3000;
+// NPC traffic: spawn within ~150 m of players, despawn beyond; 12–20 cars, low sync
+const TR=[],TR_MAX=Number(env.TRAFFIC_MAX)||16,TR_R=150,LINES=[...T.ROADS,-T.HWY,T.HWY];let trN=0;
+function trSpawn(px,pz){const ax=Math.random()<.5,srt=[...LINES].sort((a,b)=>Math.abs(a-(ax?pz:px))-Math.abs(b-(ax?pz:px))),r=srt[Math.random()<.6?0:Math.random()<.7?1:2];
+ const along=(ax?px:pz)+(Math.random()-.5)*160,dir=Math.random()<.5?1:-1,sup=Math.random()<.3,lane=dir*1.8;
+ const x=ax?along:r+lane,z=ax?r-lane:along;if(Math.abs(x)>T.HALF-8||Math.abs(z)>T.HALF-8)return;if(x>150)return;
+ const cols=sup?['#ffd600','#d50000','#00c853','#ff6d00','#aa00ff','#212121']:['#eceff1','#90a4ae','#1565c0','#c62828','#5d4037','#2e7d32'];
+ const v={id:'tr'+(trN++),kind:sup?'super':'car',col:cols[Math.floor(Math.random()*cols.length)],npc:1,traffic:1,ax,r,dir,lane,sp:sup?16:10,x,z,ry:ax?(dir>0?Math.PI/2:-Math.PI/2):(dir>0?0:Math.PI),driver:'npc',t:0,used:0,ch:true};TR.push(v);VEHS.push(v)}
+function trDel(v){v.gone=1;const i=VEHS.indexOf(v);if(i>=0)VEHS.splice(i,1);TR.splice(TR.indexOf(v),1);bcast({t:'vdel',id:v.id})}
+setInterval(()=>{const ps=[...POS.values()];if(!ps.length){while(TR.length)trDel(TR[0]);return}const dt=.5;
+ for(const v of [...TR]){if(v.stolen){if(!v.driver&&now()-v.used>60000)trDel(v);continue}
+  const near1=ps.some(o=>Math.hypot(o.x-v.x,o.z-v.z)<TR_R+20);if(!near1){trDel(v);continue}
+  const blk=ps.some(o=>o.s!==2&&(Math.hypot(o.x-v.x,o.z-v.z)<4.5||Math.hypot(o.x-(v.x+(v.ax?v.dir*5:0)),o.z-(v.z+(v.ax?0:v.dir*5)))<3));if(blk)continue;
+  const st=v.sp*dt*v.dir;if(v.ax)v.x+=st;else v.z+=st;const pos=v.ax?v.x:v.z;
+  const cr=LINES.find(q=>Math.abs(q-pos)<Math.abs(st)/2+.01&&Math.random()<.3);if(cr!=null){const nax=!v.ax,ndir=Math.random()<.5?1:-1;v.ax=nax;v.r=cr;v.dir=ndir;v.lane=ndir*1.8;if(nax){v.z=cr-v.lane;v.ry=ndir>0?Math.PI/2:-Math.PI/2}else{v.x=cr+v.lane;v.ry=ndir>0?0:Math.PI}}
+  if(Math.abs(v.x)>T.HALF-6||Math.abs(v.z)>T.HALF-6||v.x>152){trDel(v);continue}v.ch=true}
+ const want=Math.min(TR_MAX,Math.max(12,ps.length*12));for(let k=0;k<4&&TR.filter(v=>!v.stolen).length<want;k++){const o=ps[Math.floor(Math.random()*ps.length)];trSpawn(o.x,o.z)}},500).unref();
 // ---------- HTTP + WS ----------
 const app=express();app.disable('x-powered-by');
 app.use(require('compression')()); // gzip text assets (three.js ~2 MB -> ~0.45 MB)

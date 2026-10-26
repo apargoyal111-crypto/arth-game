@@ -169,6 +169,7 @@ function on(m){
  else if(m.t==='gain'){if(m.cd&&ME)ME.cd=m.cd;if(window.onGain)window.onGain(m.text)}
  else if(m.t==='life')toast(m.text);
  else if(m.t==='fx'){if(window.onFx)window.onFx(m)}
+ else if(m.t==='garage'||m.t==='callcar'||m.t==='range'||m.t==='vdel'){if(window.on3b)window.on3b(m)}
  else if(m.t==='say'){if(window.onSay)window.onSay(m)}
  else if(m.t==='dlg'){if(window.onDlg)window.onDlg(m)}
  else if(m.t==='wanted'){if(window.onWanted)window.onWanted(m)}
