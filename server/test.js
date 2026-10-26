@@ -128,6 +128,9 @@ const Z=id=>T.ZONES.find(z=>z.id===id);
  console.log('7. migration + level');const O=new Cl('O');await O.open('tokold');await O.wait(m=>m.t==='me');ok(O.me.state==='alive'&&!!O.me.life&&O.me.lvl>=1,'old dead/aged account loads fine as adult');O.ws.close();
  A.send({t:'admin',key:'testkey123'});await sleep(200);A.send({t:'lines'});const ln=await A.wait(m=>m.t==='lines',3000).catch(()=>null);ok(!!ln&&ln.f.length>3&&ln.f.every(s=>/[\u0900-\u097F]/.test(s)&&!/^[\x00-\x7F\s]+$/.test(s)),'female NPC lines all Devanagari ('+(ln&&ln.f.length)+')');
  const C=new Cl('C');await C.open();C.send({t:'signup',name:'चिंटू',g:'m'});await C.wait(m=>m.t==='me');
+ console.log('8. beach');{const BN=[...NP.values()];const sw=BN.filter(p=>/^swim/.test(p.l||''));ok(BN.some(p=>/नारियलवाला/.test(p.n))&&BN.some(p=>/लाइफ़गार्ड/.test(p.n))&&BN.filter(p=>/🏖️/.test(p.n)).length>=6,'beach NPCs present (tourists, vendor, lifeguard)');
+  ok(sw.length>=5&&sw.every(p=>p.x>150),'swimwear NPCs only in the beach zone ('+sw.length+')');ok(BN.filter(p=>/नारियलवाला|कैफ़े|डांसर|गायक|जेट-स्की/.test(p.n)).every(p=>!/^swim/.test(p.l||'')),'vendors/staff/dancer keep normal clothes');
+  C.send({t:'setLook',look:'swim1'});const cl=await C.wait(m=>m.t==='me'&&(m.look==='swim1'||(m.me&&m.me.look==='swim1')),3000).catch(()=>null);ok(!!cl,'player beach look accepted');C.send({t:'setLook',look:'normal'});await C.wait(m=>m.t==='me')}
  C.send({t:'admin',key:'wrong'});await C.wait(m=>m.t==='err');
  const h2=await (await fetch('http://localhost:'+PORT+'/health')).json();ok(h2.ok&&h2.players===6,'health: '+JSON.stringify(h2));
  const post=(u,b,k)=>fetch('http://localhost:'+PORT+u,{method:'POST',headers:{'content-type':'application/json','x-admin-key':k},body:JSON.stringify(b)}).then(async r=>({s:r.status,j:await r.json()}));

@@ -29,7 +29,7 @@ function persist(){if(!dirty)return;dirty=false;fs.mkdirSync(path.dirname(DATA),
 setInterval(()=>{try{persist()}catch(e){console.error('persist',e)}},3000).unref();
 
 // ---------- helpers ----------
-const LOOKS=['normal','kurta','shirt','salwar','saree','apara','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','gf','cmdo'];const look=v=>{v=v==='hero'?'apara':v==='heroine'?'h1':v;return LOOKS.includes(v)?v:'normal'}; // original fictional looks only
+const LOOKS=['normal','kurta','shirt','salwar','saree','apara','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','gf','cmdo','swim1','swim2','swim3','swimM'];const look=v=>{v=v==='hero'?'apara':v==='heroine'?'h1':v;return LOOKS.includes(v)?v:'normal'}; // original fictional looks only
 const clean=(s,n)=>String(s==null?'':s).replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,n);
 const uid=()=>crypto.randomBytes(6).toString('hex');
 const now=()=>Date.now();
@@ -258,6 +258,14 @@ const ROLES={
  friend:{e:'💖',t:'',look:'gf',items:[],hi:['अरे, तुम आ गए! आज कहाँ घूमने चलें?','पार्क की हवा आज बहुत अच्छी है 🙂','चाय पीने चलें? मुझे बाज़ार वाली चाय पसंद है।','शाम को मंदिर की आरती देखने चलोगे?'],call:['चलो ना, घूमने चलते हैं! 😄','आज मौसम कितना प्यारा है!']},
  cricket:{e:'🏏',t:'',look:'shirt',items:[['cricket','🏏 क्रिकेट खेलें!',0,{h:2,j:3}]],hi:['आओ, एक ओवर खेलोगे?','आउट! हाहा 😂'],call:['चौका! 🏏','हाउज़ैट!! ☝️']},
  elder:{e:'👴',t:'दादाजी',look:'kurta',items:[['salah','💭 कोई सलाह दीजिए',0,{j:1,r:1}]],hi:['जीते रहो बेटा','हमारे ज़माने में…'],call:['सुबह की सैर सबसे अच्छी 🚶']},
+ tourist:{e:'🏖️',t:'',look:'swim2',items:[['selfie','🤳 सेल्फ़ी लें?',0,{j:2}]],hi:['नमस्ते! आज समुंदर कितना नीला है ना 🌊','पानी बिल्कुल ठंडा है, मज़ा आ गया!','सूर्यास्त यहाँ से सबसे सुंदर दिखता है 🌅','आपने जेट-स्की ट्राय की? बहुत मज़ेदार है!','पैरासेलिंग से पूरा शहर दिखता है ✨','नारियल पानी पिया? वहाँ स्टॉल पर मिलता है 🥥','मैं दिल्ली से छुट्टियाँ मनाने आई हूँ','शाम को वॉकिंग स्ट्रीट चलेंगे, वहाँ बहुत रौनक होती है'],call:['लहरें देखो, कितनी ऊँची! 🌊','धूप बहुत अच्छी है आज ☀️','सनस्क्रीन लगाना मत भूलना!','यहाँ की रेत कितनी मुलायम है']},
+ volley:{e:'🏐',t:'',look:'swim1',items:[['volley','🏐 वॉलीबॉल खेलें!',0,{h:2,j:3}]],hi:['आओ, हमारी टीम में खेलो! 🏐','एक पॉइंट और, फिर हम जीत जाएँगे!','सर्व तुम करो इस बार','बहुत अच्छा शॉट था!'],call:['स्पाइक! 🏐','पॉइंट हमारा! 🙌','बॉल पकड़ो!']},
+ nariyal:{e:'🥥',t:'नारियलवाला',look:'kurta',items:[['coconut','🥥 नारियल पानी ₹40',40,{h:2,j:2}],['bhel','🥗 भेलपुरी ₹30',30,{j:2}],['gola','🍧 बर्फ़ का गोला ₹20',20,{j:3}]],job:1,hi:['ताज़ा नारियल, एकदम मीठा!','भेलपुरी बनाऊँ? चटपटी वाली?','गर्मी में गोला खाओ, ठंडक मिलेगी'],call:['नारियल पानी! ठंडा-ठंडा 🥥','गोला! रंग-बिरंगा गोला 🍧']},
+ lifeguard:{e:'🛟',t:'लाइफ़गार्ड',look:'shirt',hi:['झंडे के आगे मत जाना, वहाँ गहरा है','तैरते समय सावधान रहिए 🛟','लहरें तेज़ हैं, किनारे के पास रहें'],call:['🎵 फ्र्र्र! किनारे पर आइए!','लाल झंडे के आगे मत जाइए!']},
+ jetski:{e:'🚤',t:'जेट-स्की वाले',look:'shirt',items:[['ride','🚤 जेट-स्की राइड ₹300',300,{j:6}],['para','🪂 पैरासेलिंग ₹500',500,{j:8}]],job:1,hi:['जेट-स्की चलाओगे? लाइफ़ जैकेट मिलेगी','पैरासेलिंग से पूरा अर्थ सिटी दिखता है!'],call:['राइड लो, मज़ा लो! 🚤','पैरासेलिंग! आसमान से नज़ारा 🪂']},
+ juice:{e:'🍹',t:'कैफ़े वाली',look:'salwar',items:[['juice','🍹 मैंगो शेक ₹60',60,{h:1,j:3}],['fish','🐟 फ़िश करी थाली ₹180',180,{h:3,j:3}]],job:1,hi:['आइए, ताज़ा जूस बना दूँ?','आज की स्पेशल फ़िश करी है','किनारे की ठंडी हवा में बैठिए'],call:['मैंगो शेक! ताज़ा-ताज़ा 🍹','सी-फ़ूड थाली तैयार है!']},
+ dancer:{e:'💃',t:'डांसर',look:'h3',hi:['आज शाम हमारा शो है, ज़रूर आना!','ये फ़ोक डांस मेरी नानी ने सिखाया था','संगीत के बिना ज़िंदगी अधूरी है 🎶'],call:['🎶 ताल से ताल मिला!','तालियाँ! 👏']},
+ busker:{e:'🎸',t:'गायक',look:'shirt',hi:['कोई फ़रमाइश? पुराने गाने भी आते हैं','संगीत सबको जोड़ता है 🎸'],call:['🎵 ये शाम मस्तानी…','🎸 एक गाना आपके नाम!']},
  police:{e:'👮',t:'हवलदार',look:'police',police:1,hi:['जय हिंद! कोई दिक्कत?','शहर में सब ठीक है?'],call:['सावधान रहें, सुरक्षित रहें']},
  traffic:{e:'🚦',t:'ट्रैफ़िक पुलिस',look:'traffic',police:1,hi:['हेलमेट पहनो, धीरे चलाओ!','सीट बेल्ट लगाओ 🚗'],call:['🎵 फ्र्र्र्र! रुको!','धीमे चलो!']}};
 const ADVICE=['जल्दी सोओ, जल्दी उठो 🌅','पैसा बचाओ, बुढ़ापे में काम आएगा','दोस्त कम रखो पर पक्के रखो','पढ़ाई कभी बेकार नहीं जाती','माँ-बाप की सेवा करो 🙏'];
@@ -274,11 +282,17 @@ const NPCDEF=[
  ['friend','ज़ोया','f',23,[[0,1,[PA[0]+4,PA[1]+2],'wander']]],
  ['elder','दादाजी','m',72,[[.2,.35,[PA[0]-10,PA[1]-4],'walk'],[.35,.7,[18,22],'bench'],[.7,.85,[TE[0]-4,TE[1]-6],'post']]],['elder','दादीजी','f',68,[[.2,.35,[PA[0]+10,PA[1]-4],'walk'],[.35,.7,[42,22],'bench']]],
  ['police','हवलदार सिंह','m',40,[[0,1,[THANA[0]+3,THANA[1]+22],'post']]],['police','सिपाही यादव','m',31,[[0,.5,[MK[0]-4,MK[1]+16.5],'post'],[.5,1,[-60+6.5,-30],'post']]],
- ['traffic','ट्रैफ़िक हवलदार','m',36,[[.25,.88,[4.5,4.5],'post']]]];
+ ['traffic','ट्रैफ़िक हवलदार','m',36,[[.25,.88,[4.5,4.5],'post']]],
+ ['tourist','प्रिया','f',26,[[0,1,[176,-10],'wander']],'swim2'],['tourist','अनन्या','f',24,[[0,1,[178,25],'wander']],'swim1'],['tourist','मेघा','f',29,[[0,1,[180,-60],'wander']],'swim3'],
+ ['tourist','काव्या','f',27,[[0,1,[170,60],'wander']],'swim2'],['tourist','रिया','f',25,[[0,1,[168,-30],'wander']],'salwar'],['tourist','निशा','f',31,[[0,1,[174,95],'wander']],'swim1'],
+ ['tourist','अर्जुन','m',28,[[0,1,[176,10],'wander']],'swimM'],
+ ['volley','तान्या','f',23,[[.25,.8,[165,-36],'cricket']],'swim3'],['volley','ईशा','f',24,[[.25,.8,[165,-44],'cricket']],'swim1'],['volley','विक्रम','m',26,[[.25,.8,[163,-40],'cricket']],'swimM'],
+ ['nariyal','सलीम','m',40,[[.2,.9,[159,5],'post']]],['lifeguard','राजू','m',30,[[.2,.85,[178,44],'post']]],['jetski','टोनी','m',33,[[.25,.8,[181,-84],'post']]],
+ ['juice','सीमा','f',36,[[.25,.95,[159,-118],'post']]],['dancer','माधुरी','f',27,[[.55,.95,[120,213],'post'],[0,.55,[100,213],'wander']]],['busker','कबीर','m',29,[[.5,1,[90,215],'post']]]];
 const nearestNode=(x,z)=>{let bi=0,bd=1e9;T.NODES.forEach((n,i)=>{const d=Math.hypot(n[0]-x,n[1]-z);if(d<bd){bd=d;bi=i}});return bi};
 function bfs(a,b){if(a===b)return[a];const prev=new Map([[a,-1]]),q=[a];while(q.length){const n=q.shift();if(n===b)break;for(const m of T.EDGES[n])if(!prev.has(m)){prev.set(m,n);q.push(m)}}if(!prev.has(b))return[b];const r=[];for(let n=b;n!==-1;n=prev.get(n))r.unshift(n);return r}
-for(const [role,name,g,age,sched] of NPCDEF){const R=ROLES[role],i=BOTS.length,hm=T.NODES[(i*7)%T.NODES.length];
- BOTS.push({id:'npc'+i,role,name:R.e+' '+name+(R.t?' '+R.t:''),base:name,g,look:R.look,age,x:sched[0][2][0],z:sched[0][2][1],ry:0,sched,home:[hm[0]+(i%2?5:-5),hm[1]+5],route:[],slot:-2,wait:0,sit:false,ch:true,sp:role==='cricket'?2.2:1.4,hid:false,idleT:0})}
+for(const def of NPCDEF){const [role,name,g,age,sched]=def;const R=ROLES[role],i=BOTS.length,hm=T.NODES[(i*7)%T.NODES.length];
+ BOTS.push({id:'npc'+i,role,name:R.e+' '+name+(R.t?' '+R.t:''),base:name,g,look:def[5]||R.look,age,x:sched[0][2][0],z:sched[0][2][1],ry:0,sched,home:[hm[0]+(i%2?5:-5),hm[1]+5],route:[],slot:-2,wait:0,sit:false,ch:true,sp:role==='cricket'||role==='volley'?2.2:1.4,hid:false,idleT:0})}
 const ROLEB=BOTS.filter(b=>b.role),POLICE=ROLEB.filter(b=>ROLES[b.role].police);
 function goTo(b,x,z){if(Math.hypot(b.x-x,b.z-z)<14){b.route=[[x,z]];b.sit=false;b.ch=true;return}const path=bfs(nearestNode(b.x,b.z),nearestNode(x,z)).map(n=>T.NODES[n]);b.route=path.concat([[x,z]]);b.sit=false;b.ch=true}
 function nearPlayer(x,z,r){for(const o of POS.values())if(Math.hypot(o.x-x,o.z-z)<r)return o;return null}
@@ -290,7 +304,7 @@ function roleTick(dt){const ph=dayPhase(),t=now();
    const st=Math.min(d,b.sp*dt);b.x+=dx/d*st;b.z+=dz/d*st;b.ry=Math.atan2(dx,dz);b.ch=true;continue}
   if(si<0)continue;const s=b.sched[si],mode=s[3];b.idleT-=dt;if(b.idleT>0)continue;b.idleT=4+Math.random()*6;
   const pl=nearPlayer(b.x,b.z,22);
-  if(mode==='cricket'){if(Math.random()<.4)bcast({t:'fx',k:'bat',id:b.id});const a=Math.random()*6.28;b.route=[[s[2][0]+Math.cos(a)*4,s[2][1]+Math.sin(a)*3]];if(pl&&Math.random()<.3)botSay(b,pickL(ROLES[b.role].call));b.idleT=1.5+Math.random()*2;continue}
+  if(mode==='cricket'){if(Math.random()<.4)bcast({t:'fx',k:b.role==='volley'?'wave':'bat',id:b.id});const a=Math.random()*6.28;b.route=[[s[2][0]+Math.cos(a)*4,s[2][1]+Math.sin(a)*3]];if(pl&&Math.random()<.3)botSay(b,pickL(ROLES[b.role].call));b.idleT=1.5+Math.random()*2;continue}
   if(mode==='walk'){const a=Math.random()*6.28;b.route=[[s[2][0]+Math.cos(a)*8,s[2][1]+Math.sin(a)*6]];continue}
   if(mode==='wander'){b.route=[[s[2][0]+(Math.random()-.5)*14,s[2][1]+(Math.random()-.5)*8]];continue}
   if(mode==='bench'){const bn=T.BENCH.find(q=>Math.hypot(q[0]-s[2][0],q[1]-s[2][1])<1);if(bn&&!b.sit){b.x=bn[0];b.z=bn[1];b.ry=bn[2];b.sit=true;b.wait=30;b.ch=true}continue}
