@@ -459,6 +459,13 @@ app.use(require('compression')()); // gzip text assets (three.js ~2 MB -> ~0.45 
 app.use('/models',express.static(require('path').join(__dirname,'..','public','models'),{maxAge:'7d',immutable:true}));
 app.use('/vendor',express.static(require('path').join(__dirname,'..','public','vendor'),{maxAge:'1d'}));
 app.use(express.static(path.join(__dirname,'..','public'),{maxAge:0}));
+// owner grant by name (env OWNER_NAMES) + admin endpoints protected by ADMIN_KEY header (called only from ops box)
+const OWNER_NAMES=String(env.OWNER_NAMES||'').split(',').map(x=>x.trim()).filter(Boolean);
+function grantOwner(p){if(!p||p.admin)return;p.admin=true;if(!p.look||p.look==='normal')p.look='cmdo';gfDefault(p);mark();const ws=socks.get(p.id);if(ws){pushMe(p);const g=ROLEB.find(x=>x.id===p.gf);if(g)send(ws,{t:'gf',id:g.id,name:g.name,list:ROLEB.filter(x=>x.g==='f'&&x.role!=='police').map(x=>({id:x.id,name:x.name}))})}}
+function keyOk(q){const K=String(env.ADMIN_KEY||''),k=String(q.get('x-admin-key')||'');return K&&k.length===K.length&&crypto.timingSafeEqual(Buffer.from(k),Buffer.from(K))}
+app.post('/admin/owner',express.json({limit:'2kb'}),(q,r)=>{if(!keyOk(q))return r.status(403).json({ok:false});const ps=Object.values(db.players).filter(p=>p.name===String(q.body.name||''));ps.forEach(grantOwner);r.json({ok:true,granted:ps.length})});
+app.post('/admin/delete',express.json({limit:'2kb'}),(q,r)=>{if(!keyOk(q))return r.status(403).json({ok:false});const ps=Object.values(db.players).filter(p=>p.name===String(q.body.name||''));
+ for(const p of ps){const ws=socks.get(p.id);if(ws)try{ws.close()}catch(e){}socks.delete(p.id);POS.delete(p.id);for(const o of Object.values(db.players)){o.friends=(o.friends||[]).filter(x=>x!==p.id);o.friendReq=(o.friendReq||[]).filter(x=>x!==p.id);o.proposals=(o.proposals||[]).filter(x=>x!==p.id);if(o.spouse===p.id)o.spouse=null}delete db.players[p.id]}mark();pushPlayers();r.json({ok:true,deleted:ps.length})});
 app.get('/health',(q,r)=>r.json({ok:true,players:Object.keys(db.players).length,active:socks.size}));
 const server=http.createServer(app);
 const wss=new WebSocketServer({server,maxPayload:32*1024});
@@ -488,7 +495,7 @@ wss.on('connection',(ws,req)=>{
     const old=socks.get(p.id);if(old&&old!==ws){socks.delete(p.id);send(old,{t:'err',text:'दूसरी जगह से लॉगिन हुआ'});try{old.close()}catch(e){}}
     me=p;ws.pid=p.id;socks.set(p.id,ws);
     send(ws,{t:'auth',token:p.token,id:p.id,ice:ICE,cfg:{pregMs:PREG_MS,turnMs:TURN_MS,scale:SCALE}});
-    pushMe(p);if(p.wanted)send(ws,{t:'wanted',n:p.wanted});if(p.admin){gfDefault(p);const g=ROLEB.find(x=>x.id===p.gf);if(g)send(ws,{t:'gf',id:g.id,name:g.name,list:ROLEB.filter(x=>x.g==='f'&&x.role!=='police').map(x=>({id:x.id,name:x.name}))})}if(p.gig){const z=T.ZONES.find(q=>q.id===p.gig.to);if(z)send(ws,{t:'gig',to:z.id,n:z.n,pay:p.gig.pay,x:z.x,z:z.z})}send(ws,{t:'world',w:worldView()});pushPlayers();send(ws,{t:'vehs',list:VEHS.map(vehView)});return}
+    if(OWNER_NAMES.includes(p.name)&&!p.admin)grantOwner(p);pushMe(p);if(p.wanted)send(ws,{t:'wanted',n:p.wanted});if(p.admin){gfDefault(p);const g=ROLEB.find(x=>x.id===p.gf);if(g)send(ws,{t:'gf',id:g.id,name:g.name,list:ROLEB.filter(x=>x.g==='f'&&x.role!=='police').map(x=>({id:x.id,name:x.name}))})}if(p.gig){const z=T.ZONES.find(q=>q.id===p.gig.to);if(z)send(ws,{t:'gig',to:z.id,n:z.n,pay:p.gig.pay,x:z.x,z:z.z})}send(ws,{t:'world',w:worldView()});pushPlayers();send(ws,{t:'vehs',list:VEHS.map(vehView)});return}
    if(m.t==='admin'){const K=String(env.ADMIN_KEY||''),k=String(m.key||'');
     if(!me||!K||k.length!==K.length||!crypto.timingSafeEqual(Buffer.from(k),Buffer.from(K)))return send(ws,{t:'err',text:'गलत एडमिन कुंजी'});
     me.admin=true;if(!me.look||me.look==='normal'){me.look='cmdo';pushPlayers()}mark();gfDefault(me);{const g=ROLEB.find(x=>x.id===me.gf);if(g)send(ws,{t:'gf',id:g.id,name:g.name,list:ROLEB.filter(x=>x.g==='f'&&x.role!=='police').map(x=>({id:x.id,name:x.name}))})}if(me.state==='preg'){startLife(me);pushPlayers()}pushMe(me);return send(ws,{t:'err',text:'👑 स्पेशल एक्सेस चालू!'})}
