@@ -21,6 +21,8 @@ return {init:init,
  click:function(){tone('sine',900,.05,.05)},step:function(){burst(500,'lowpass',.05,.06)},
  punch:function(){burst(900,'bandpass',.18,.08)},hit:function(){burst(300,'lowpass',.35,.18);tone('sine',120,.3,.18,50)},
  act:function(){tone('sine',660,.06,.25);setTimeout(function(){tone('sine',990,.05,.35)},90)},
+ whistle:function(){tone('sine',2600,.05,.18,2900);setTimeout(function(){tone('sine',2700,.05,.35,3000)},200)},
+ siren:function(v){if(!ctx)return;var t=ctx.currentTime;for(var i=0;i<2;i++){var o=ctx.createOscillator(),g=ctx.createGain();o.type='sawtooth';o.frequency.setValueAtTime(700,t+i*.5);o.frequency.linearRampToValueAtTime(1150,t+i*.5+.25);o.frequency.linearRampToValueAtTime(700,t+i*.5+.5);g.gain.setValueAtTime(.0001,t+i*.5);g.gain.linearRampToValueAtTime(.045*(v||1),t+i*.5+.05);g.gain.linearRampToValueAtTime(.0001,t+i*.5+.5);o.connect(g);g.connect(master);o.start(t+i*.5);o.stop(t+i*.5+.52)}},
  horn:function(){tone('square',392,.06,.45,385);tone('square',494,.05,.45,488)},engine:engine,
  ambient:function(night,market){if(!ctx)return;amb.day=1-night;amb.cr.gain.setTargetAtTime(night>.5?.012:0,ctx.currentTime,1);amb.mk.g.gain.setTargetAtTime(.09*market,ctx.currentTime,.5)},
  muted:function(){return muted},setMuted:function(m){muted=m;try{localStorage.setItem('zmute',m?'1':'0')}catch(e){}if(master)master.gain.setTargetAtTime(m?0:.8,ctx.currentTime,.05)}};})();

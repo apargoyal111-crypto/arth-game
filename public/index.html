@@ -170,6 +170,11 @@ function on(m){
  else if(m.t==='life')toast(m.text);
  else if(m.t==='fx'){if(window.onFx)window.onFx(m)}
  else if(m.t==='say'){if(window.onSay)window.onSay(m)}
+ else if(m.t==='dlg'){if(window.onDlg)window.onDlg(m)}
+ else if(m.t==='wanted'){if(window.onWanted)window.onWanted(m)}
+ else if(m.t==='jail'){if(window.onJail)window.onJail(m)}
+ else if(m.t==='gig'){if(window.onGig)window.onGig(m)}
+ else if(m.t==='chalan'){if(window.onChalan)window.onChalan(m)}
  else if(m.t==='vehs'){if(window.onVehs)window.onVehs(m.list)}
  else if(m.t==='drive'){if(window.onDrive)window.onDrive(m)}
  else if(m.t==='err')toast('⚠️ '+m.text);
