@@ -12,3 +12,9 @@ Hero/heroine looks (अपारा, रिया, काव्या, …) are 
 three.js (MIT) is in `../vendor/` (see `three-LICENSE.txt`). All town textures are generated on the device at runtime (no image assets).
 
 Earlier Mixamo-derived models (soldier/michelle/Xbot) were never committed to this repository and are not used.
+
+## Oct 2026 update
+- Models are now the meshopt-compressed versions (EXT_meshopt_compression, ~1.75 MB / ~1.8 MB). Decoder: `../vendor/jsm/libs/meshopt_decoder.module.js` (meshoptimizer, MIT).
+- Indian everyday outfits (कुर्ता-पजामा, शर्ट-पैंट, सलवार-कमीज़, साड़ी colours), stripe/check/booti print patterns, wider Indian skin-tone range, hair colours (grey for older people) are all runtime shader recolours of the same CC0 models — no new assets.
+- Punch, sit, wave, stagger and action poses are procedural bone rotations in code (no extra animation files).
+- `town.js` layout, all buildings, props and textures are generated in code (no image or model assets).

@@ -49,44 +49,50 @@ nav button.on{color:#4450d8;font-weight:700}nav button b{display:block;font-size
 .months{display:flex;gap:4px;margin:12px 0}.months span{flex:1;height:10px;border-radius:5px;background:#e6e8f3}.months span.on{background:#f48fb1}
 .feed .li{border-color:#9be3c0}
 
-/* ---- 3D shell ---- */
+/* ---- 3D shell: game is always visible, HUD overlays + slide-in drawer ---- */
 html,body{height:100%;overflow:hidden}
 body{padding:0;background:#9fc7ef;overscroll-behavior:none;-webkit-user-select:none;user-select:none;touch-action:none}
 #c3d{position:fixed;inset:0;width:100%;height:100%;display:block;z-index:0}
-#stats{position:fixed;left:0;right:0;top:0;background:rgba(255,255,255,.88);z-index:7}
-#pw{position:fixed;left:0;right:0;top:44px;bottom:62px;overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:4;background:rgba(238,241,255,.86);touch-action:pan-y;-webkit-user-select:text;user-select:text}
-body.city #pw{display:none}
-#pclose{position:sticky;top:0;z-index:3;display:flex;justify-content:flex-end;max-width:560px;margin:0 auto;padding:6px 12px 0}
-#pclose button{min-height:44px;border:none;border-radius:22px;background:#2a2d3e;color:#fff;font:inherit;font-size:14px;padding:6px 14px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-.ctl{display:none}body.city .ctl{display:block}
-#joy{position:fixed;left:18px;bottom:86px;width:132px;height:132px;border-radius:50%;background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.55);z-index:5;touch-action:none}
-#knob{position:absolute;left:41px;top:41px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.25)}
-#run{position:fixed;right:18px;bottom:96px;width:76px;height:76px;border-radius:50%;border:none;background:rgba(91,108,255,.85);color:#fff;font:inherit;font-weight:700;font-size:15px;z-index:5;box-shadow:0 3px 10px rgba(0,0,0,.25)}
-#run.on{background:#e5484d}
-#qb{position:fixed;right:14px;top:206px;min-height:44px;padding:6px 12px;border:none;border-radius:22px;background:rgba(255,255,255,.85);color:#555;font:inherit;font-size:13px;z-index:5}
-#lookb{position:fixed;right:14px;top:150px;min-height:48px;padding:6px 14px;border:none;border-radius:24px;background:rgba(255,255,255,.9);color:#3b3f9e;font:inherit;font-weight:700;font-size:14px;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.2)}
-#meet{position:fixed;left:50%;transform:translateX(-50%);bottom:200px;z-index:5;display:none;min-height:50px;padding:10px 18px;border:none;border-radius:26px;background:#22a565;color:#fff;font:inherit;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.25)}
-#hint{position:fixed;left:50%;transform:translateX(-50%);top:150px;z-index:5;background:rgba(42,45,62,.82);color:#fff;border-radius:14px;padding:6px 14px;font-size:14px;max-width:88%;text-align:center;pointer-events:none}
-#zoneBanner{display:block;background:#fff3e0;color:#b26a00;border-radius:12px;padding:6px 12px;margin-top:10px;font-weight:700;font-size:15px}
-nav{z-index:8}nav button.city{color:#22a565}
+#stats{position:fixed;left:8px;top:8px;width:186px;background:rgba(20,22,36,.62);color:#fff;border-radius:14px;padding:6px 9px;z-index:7;box-shadow:none;margin:0;font-size:12px;line-height:1.3;pointer-events:none}
+#stats .srow{margin:0 0 3px;font-size:12px}#stats .st{font-size:11px;margin-top:2px}#stats .st b{font-weight:700}#stats .bar{height:5px;background:rgba(255,255,255,.25)}#stats .pill{font-size:10px;padding:0 6px}
+#pw{position:fixed;right:0;top:0;bottom:56px;width:min(420px,88vw);overflow-y:auto;-webkit-overflow-scrolling:touch;z-index:9;background:rgba(244,246,255,.97);touch-action:pan-y;-webkit-user-select:text;user-select:text;transform:translateX(105%);transition:transform .25s;box-shadow:-6px 0 24px rgba(0,0,0,.25);border-radius:16px 0 0 16px}
+body.drawer #pw{transform:none}body.full #pw{width:100%;bottom:0;border-radius:0;transform:none}
+#pclose{position:sticky;top:0;z-index:3;display:flex;justify-content:flex-end;padding:6px 10px 0}
+#pclose button{min-height:40px;border:none;border-radius:20px;background:#2a2d3e;color:#fff;font:inherit;font-size:14px;padding:4px 14px}
+body.full #pclose{display:none}
+#joy{position:fixed;left:16px;bottom:74px;width:124px;height:124px;border-radius:50%;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.55);z-index:5;touch-action:none}
+#knob{position:absolute;left:37px;top:37px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.rb{position:fixed;width:62px;height:62px;border-radius:50%;border:none;color:#fff;font:inherit;font-weight:700;font-size:12px;line-height:1.1;z-index:5;box-shadow:0 3px 10px rgba(0,0,0,.3);touch-action:manipulation}
+#run{right:14px;bottom:76px;background:rgba(91,108,255,.88)}#run.on{background:#e5484d}
+#punchB{right:86px;bottom:76px;background:rgba(229,72,77,.9)}#sitB{right:14px;bottom:148px;background:rgba(34,165,101,.9)}
+#actB{position:fixed;left:50%;transform:translateX(-50%);bottom:150px;z-index:6;display:none;min-height:52px;padding:10px 20px;border:none;border-radius:26px;background:#ffb703;color:#2a2d3e;font:inherit;font-weight:800;font-size:17px;box-shadow:0 3px 12px rgba(0,0,0,.3)}
+#actB:disabled{background:#c9c9c9}
+#meet{position:fixed;left:50%;transform:translateX(-50%);bottom:212px;z-index:5;display:none;min-height:44px;padding:8px 16px;border:none;border-radius:22px;background:#22a565;color:#fff;font:inherit;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+#mm{position:fixed;right:8px;top:8px;width:124px;height:124px;border-radius:14px;border:2px solid rgba(255,255,255,.8);z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+#lookb,#qb{position:fixed;right:8px;min-height:36px;padding:4px 10px;border:none;border-radius:18px;background:rgba(255,255,255,.88);color:#3b3f9e;font:inherit;font-weight:700;font-size:12px;z-index:5}
+#lookb{top:138px}#qb{top:178px}
+#hint{position:fixed;left:50%;transform:translateX(-50%);top:122px;z-index:5;background:rgba(42,45,62,.82);color:#fff;border-radius:14px;padding:5px 12px;font-size:13px;max-width:70%;text-align:center;display:none}
+#toast{top:150px;background:rgba(42,45,62,.88);font-size:14px;pointer-events:none}
+nav{z-index:10;height:56px}nav button{min-height:56px;font-size:12px}nav button b{font-size:19px}
+body.full .ctl,body.full nav{display:none!important}
 </style></head><body>
 <div id="conn">🔌 कनेक्शन टूटा — फिर से जोड़ रहे हैं…</div><div id="toast"></div>
-<div id="stats" style="display:none"></div>
+<div id="stats" style="display:none"></div><canvas id="mm" class="ctl" width="248" height="248"></canvas>
 <canvas id="c3d"></canvas>
-<div id="pw"><div id="pclose"><button id="pcb">✕ शहर में घूमें 🏙️</button></div><div class="wrap" id="app"><h1>🌧️ ज़िंदगी ऑनलाइन</h1><p class="small" style="text-align:center">सर्वर से जुड़ रहे हैं…</p></div></div>
-<div class="ctl" id="joy"><div id="knob"></div></div><button class="ctl" id="run">🏃 दौड़</button><button class="ctl" id="lookb">👗 लुक</button><button class="ctl" id="qb">⚙️ ऑटो</button><button id="meet"></button><div class="ctl" id="hint"></div>
+<div id="pw"><div id="pclose"><button id="pcb">✕ बंद करो</button></div><div class="wrap" id="app"><h1>🌧️ ज़िंदगी ऑनलाइन</h1><p class="small" style="text-align:center">सर्वर से जुड़ रहे हैं…</p></div></div>
+<div class="ctl" id="joy"><div id="knob"></div></div><button class="ctl rb" id="run">🏃<br>दौड़</button><button class="ctl rb" id="punchB">👊<br>पंच</button><button class="ctl rb" id="sitB">🪑<br>बैठो</button><button id="actB"></button><button class="ctl" id="lookb">👗 लुक</button><button class="ctl" id="qb">⚙️ ऑटो</button><button id="meet"></button><div class="ctl" id="hint"></div>
 <nav id="nav" style="display:none">
- <button data-city="1" class="city"><b>🏙️</b>शहर</button> <button data-tab="life" class="on"><b>🧬</b>जीवन</button><button data-tab="world"><b>🌍</b>दुनिया</button>
+ <button data-tab="life"><b>📖</b>कहानी</button><button data-tab="world"><b>📰</b>खबरें</button>
  <button data-tab="people"><b>👥</b>लोग<span class="dot" id="dP" style="display:none"></span></button><button data-tab="chat"><b>💬</b>संदेश<span class="dot" id="dC" style="display:none"></span></button>
 </nav>
 <div id="call"></div>
 <audio id="remote" autoplay playsinline></audio>
 <script>
 "use strict";
-var PANEL=true,ZONE=null;function mustPanel(){return !ME||ME.state!=="alive"}
-function setPanel(v){if(!v&&mustPanel())v=true;PANEL=v;document.body.classList.toggle("city",!v);var c=document.getElementById("pclose");if(c)c.style.visibility=mustPanel()?"hidden":"visible"}
-function fitPanel(){var st=$("stats"),h=st&&st.style.display!=="none"?st.offsetHeight:0;$("pw").style.top=h+"px"}
-window.openLife=function(z){ZONE=z;tab="life";chatWith=null;setPanel(true);render()};window.onPoses=null;window.onFeed=null;
+var PANEL=true,DRAWER=false,ZONE=null;function mustPanel(){return !ME}
+function setPanel(v){DRAWER=v;PANEL=mustPanel();document.body.classList.toggle("full",PANEL);document.body.classList.toggle("drawer",!!v&&!PANEL);document.body.classList.toggle("city",!PANEL)}
+function fitPanel(){}
+window.openLife=function(){};window.onPoses=null;window.onFeed=null;
 var viewP=false,ws=null,ME=null,W={feed:[]},PL=[],TOK=null,ICE=[{urls:'stun:stun.l.google.com:19302'}],tab='life',chatWith=null,HIST={},unread={},gsel='r',retry=0,waitT=null,lastMeAt=0;
 try{var q=new URLSearchParams(location.search).get('token');if(q)localStorage.setItem('zt',q);TOK=localStorage.getItem('zt')}catch(e){}
 try{var q0=new URLSearchParams(location.search).get('admin');if(q0){localStorage.setItem('zadmin',q0);history.replaceState(null,'',location.pathname)}}catch(e){}
@@ -105,22 +111,26 @@ setInterval(function(){S({t:'ping'})},20000);
 function on(m){
  if(m.t==='auth'){TOK=m.token;try{localStorage.setItem('zt',TOK)}catch(e){}ICE=m.ice||ICE;$('nav').style.display='flex';try{var ak=localStorage.getItem('zadmin');if(ak)S({t:'admin',key:ak})}catch(e){}}
  else if(m.t==='auth_fail'){TOK=null;try{localStorage.removeItem('zt')}catch(e){}signup()}
- else if(m.t==='me'){ME=m;setPanel(mustPanel()?true:PANEL);lastMeAt=Date.now();var n=(m.friendReq.length+m.proposals.length);$('dP').style.display=n?'block':'none';$('dP').textContent=n;if(tab==='life'||(tab==='people'&&!viewP))render();else renderStats()}
+ else if(m.t==='me'){var firstMe=!ME,wasAlive=ME&&ME.state==='alive';ME=m;if(wasAlive&&m.state==='dead'){tab='life';DRAWER=true}setPanel(firstMe?false:DRAWER);lastMeAt=Date.now();var n=(m.friendReq.length+m.proposals.length);$('dP').style.display=n?'block':'none';$('dP').textContent=n;if(DRAWER&&(tab==='life'||(tab==='people'&&!viewP)))render();else renderStats()}
  else if(m.t==='world'){W=m.w;if(tab==='world')render();renderStats()}
  else if(m.t==='tick'){W.day=m.day;W.year=m.year;W.active=m.active;W.births=m.births;W.deaths=m.deaths;renderStats();if(tab==='world'){var x=$('wclock');if(x)x.innerHTML=clockHtml()}}
- else if(m.t==='feed'){if(window.onFeed)window.onFeed(m.item);W.feed.unshift(m.item);W.feed.length=Math.min(W.feed.length,40);if(tab==='world')render();else if(m.item.kind!=='preg')toast(m.item.text)}
- else if(m.t==='players'){PL=m.list;if((tab==='people'&&!viewP)||tab==='chat')render();renderStats()}
+ else if(m.t==='feed'){if(window.onFeed)window.onFeed(m.item);W.feed.unshift(m.item);W.feed.length=Math.min(W.feed.length,40);if(DRAWER&&tab==='world')render();else if(m.item.kind!=='preg')toast(m.item.text)}
+ else if(m.t==='players'){PL=m.list;if(DRAWER&&((tab==='people'&&!viewP)||tab==='chat'))render();renderStats()}
  else if(m.t==='msg'){var o=m.m.from===ME.id?m.m.to:m.m.from;(HIST[o]=HIST[o]||[]).push(m.m);
   if(tab==='chat'&&chatWith===o)drawChat();else if(m.m.from!==ME.id){unread[o]=(unread[o]||0)+1;toast('💬 '+(m.fromName||'')+': '+m.m.text);dots()}}
  else if(m.t==='hist'){HIST[m.with]=m.msgs;if(chatWith===m.with)drawChat()}
  else if(m.t==='notif')toast(m.text);
+ else if(m.t==='gain'){if(m.cd&&ME)ME.cd=m.cd;if(window.onGain)window.onGain(m.text)}
+ else if(m.t==='life')toast(m.text);
+ else if(m.t==='fx'){if(window.onFx)window.onFx(m)}
+ else if(m.t==='say'){if(window.onSay)window.onSay(m)}
  else if(m.t==='err')toast('⚠️ '+m.text);
  else if(m.t==='profile')showProfile(m);
  else if(m.t==='rtc')rtc(m);
  else if(m.t==='poses'){if(window.onPoses)window.onPoses(m.list)}
 }
 function dots(){var n=0;for(var k in unread)n+=unread[k];$('dC').style.display=n?'block':'none';$('dC').textContent=n}
-function signup(){$('nav').style.display='none';$('stats').style.display='none';setPanel(true);setTimeout(fitPanel,0);
+function signup(){ME=null;$('nav').style.display='none';$('stats').style.display='none';setPanel(true);
  $('app').innerHTML='<h1>🌧️ ज़िंदगी ऑनलाइन</h1><p class="small" style="text-align:center">एक साझा दुनिया जहाँ असली लोग जीते हैं</p><div class="card"><h2>तुम्हारा नाम?</h2><input id="nm" maxlength="20" placeholder="नाम लिखो"><h2 style="margin-top:14px">लिंग</h2><div class="g3"><button class="btn alt" data-g="m">👦 लड़का</button><button class="btn alt" data-g="f">👧 लड़की</button><button class="btn alt sel" data-g="r">🎲 कोई भी</button></div><p class="small" style="margin-top:10px">⏳ जन्म से पहले माँ के गर्भ में 9 महीने (असली 3 दिन) इंतज़ार करना होगा।</p><button class="btn c" id="go">गर्भ में आओ 🤰</button></div>';
  document.querySelectorAll('[data-g]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-g]').forEach(function(x){x.classList.remove('sel')});b.classList.add('sel');gsel=b.dataset.g}});
  $('go').onclick=function(){var b=this,n=$('nm').value.trim();if(!n)return toast('नाम लिखो');if(b.disabled)return;b.disabled=true;setTimeout(function(){b.disabled=false},4000);S({t:'signup',name:n,g:gsel,look:window.__look||'normal'})};
@@ -128,14 +138,13 @@ function signup(){$('nav').style.display='none';$('stats').style.display='none';
  lb.onclick=function(){if(window.openLookPicker)window.openLookPicker(window.__look||'normal',function(k){window.__look=k;if(window.ZLOOKS[k].model==='f'){gsel='f'}else if(window.ZLOOKS[k].model==='m'){gsel='m'}document.querySelectorAll('[data-g]').forEach(function(x){x.classList.toggle('sel',x.dataset.g===gsel)});setLbl()})};
 }
 function bar(l,v,c){return '<div class="st">'+l+' <b>'+v+'</b><div class="bar"><i style="width:'+v+'%;background:'+c+'"></i></div></div>'}
-function renderStats(){setTimeout(fitPanel,0);var st=$('stats');if(!ME){st.style.display='none';return}st.style.display='block';
- var top='<div class="srow"><span>'+esc(ME.name)+' '+(ME.g==='m'?'👦':'👧')+'</span><span class="pill g">🟢 '+(W.active||0)+' सक्रिय</span><span class="pill o">🌍 वर्ष '+(W.year||1)+' · दिन '+(W.day||0)+'</span></div>';
- var L=ME.life;if(!L){st.innerHTML=top;return}
- var mp=Math.max(2,Math.min(100,Math.round(Math.log10(Math.max(1,L.money))*14)));
- st.innerHTML=top+'<div class="srow"><span class="small">जीवन-वर्ष '+L.gameYear+'/5</span><span class="pill">उम्र: '+L.age+' साल</span></div><div class="grid"><div class="st">💰 पैसा <b'+(L.money<0?' style="color:#c0392b"':'')+'>₹'+fmt(L.money)+'</b><div class="bar"><i style="width:'+(L.money<=0?0:mp)+'%;background:#f2b134"></i></div></div>'+bar('❤️ सेहत',L.h,L.h<30?'#e74c3c':'#2ecc71')+bar('😊 खुशी',L.j,'#5b9cff')+bar('🤝 रिश्ते',L.r,'#c86bfa')+'</div>'}
+function renderStats(){var st=$('stats');if(!ME){st.style.display='none';return}st.style.display='block';
+ var top='<div class="srow"><span>'+esc(ME.name)+'</span><span class="pill g">🟢 '+(W.active||0)+'</span></div>';
+ var L=ME.life;if(!L){st.innerHTML=top+'<div>'+(ME.state==='preg'?'🤰 नया जन्म आने वाला है':'🕯️ जीवन समाप्त')+'</div>';return}
+ st.innerHTML=top+'<div class="srow"><span>🎂 '+L.age+' साल</span><span'+(L.money<0?' style="color:#ff8a8a"':'')+'>💰 ₹'+fmt(L.money)+'</span></div>'+bar('❤️ सेहत',L.h,L.h<30?'#e74c3c':'#2ecc71')+bar('😊 खुशी',L.j,'#5b9cff')+bar('🤝 रिश्ते',L.r,'#c86bfa')+'<div class="st">📚 पढ़ाई <b>'+(L.study||0)+'</b></div>'}
 function fxHtml(d){if(!d)return '';var a=[];if(d[0])a.push('<span class="'+(d[0]>0?'p':'n')+'">'+(d[0]>0?'+':'-')+'₹'+fmt(Math.abs(d[0]))+'</span>');var n=['','सेहत','खुशी','रिश्ते'];for(var i=1;i<4;i++)if(d[i])a.push('<span class="'+(d[i]>0?'p':'n')+'">'+(d[i]>0?'+':'')+d[i]+' '+n[i]+'</span>');return a.length?'<div class="fx">'+a.join('')+'</div>':''}
-function render(){if(!ME)return;viewP=false;renderStats();clearInterval(waitT);setTimeout(function(){if(ZONE&&tab==='life'&&ME.state==='alive'){var a=$('app');if(a&&!$('zoneBanner')){var d=document.createElement('div');d.id='zoneBanner';d.textContent='📍 '+ZONE;a.insertBefore(d,a.firstChild)}}},0);
- document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',PANEL&&b.dataset.tab===tab)});
+function render(){if(!ME)return;viewP=false;renderStats();clearInterval(waitT);
+ document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',DRAWER&&b.dataset.tab===tab)});
  ({life:rLife,world:rWorld,people:rPeople,chat:rChat})[tab]()}
 function rLife(){var h='';
  if(ME.state==='preg'){var p=ME.preg,skew=Date.now()-p.now,tot=p.end-p.start;
@@ -145,23 +154,18 @@ function rLife(){var h='';
  if(ME.state==='dead'){var x=ME.summary||{};h='<h1>🕯️ जीवन समाप्त</h1><div class="card"><h2>'+esc(x.name)+'</h2><p>उम्र: <b>'+x.age+' साल</b><br>कारण: '+esc(x.cause)+'<br>शिक्षा: '+esc(x.edu)+'<br>करियर: '+esc(x.job)+'<br>परिवार: '+(x.married?'जीवनसाथी '+esc(x.partner):'अकेले')+', '+x.kids+' बच्चे<br>घर: '+(x.house?'अपना':'किराये का')+'<br>संपत्ति: <b>₹'+fmt(x.wealth)+'</b></p><div class="score">'+x.score+'/100</div><p style="text-align:center;font-weight:700">'+esc(x.rating)+'</p></div><div class="card"><h2>✨ झलकियाँ</h2><div class="tl">'+(x.hl||[]).map(function(e){return '<div><b>'+e.a+':</b> '+esc(e.t)+'</div>'}).join('')+'</div></div><button class="btn c" id="nl">🔄 नया जीवन (फिर 3 दिन का गर्भ)</button>';
   $('app').innerHTML=h;$('nl').onclick=function(){S({t:'newlife'})};return}
  var L=ME.life;
- if(L.res)h+='<div class="card"><b>✔ '+esc(L.res.choice)+'</b>'+(L.res.msg?'<p>'+esc(L.res.msg)+'</p>':'')+fxHtml(L.res.d)+'<button class="btn c" id="nx">अगला साल ➜</button><p class="small" id="wt" style="text-align:center"></p></div>';
- else if(L.ev){if(L.rnd)h+='<div class="card rand'+(L.rnd.g?'':' bad')+'"><b>'+(L.rnd.g?'🍀 किस्मत!':'⚠️ मुसीबत!')+'</b><p>'+esc(L.rnd.t)+' '+esc(L.rnd.m||'')+'</p>'+fxHtml(L.rnd.d)+'</div>';
-  h+='<div class="card"><h2>'+(L.age<5?'👶 0-4 साल':'📅 '+L.age+' साल')+'</h2><p>'+esc(L.ev.t)+'</p>'+L.ev.o.map(function(o,i){return '<button class="btn" data-i="'+i+'">'+esc(o)+'</button>'}).join('')+'</div>'}
+ h+='<div class="card"><h2>📖 '+esc(ME.name)+' — '+L.age+' साल</h2><p class="small">ज़िंदगी अपने आप आगे बढ़ती है (हर ऑनलाइन मिनट = 1 साल)। शहर में जाकर कमाओ, पढ़ो, आराम करो, दोस्त बनाओ:</p><p class="small">🏫/🎓 पढ़ाई · 🛒/🏢/🏭 काम · 🏥 इलाज · 🛕/🌳/🌊/🏠 आराम · 🏟️ खेल · 👋 लोगों से बात = रिश्ते</p>';
  var f=['🎓 '+esc(L.edu)];if(L.job)f.push('💼 '+esc(L.job)+(L.inc?' (₹'+fmt(L.inc)+'/साल)':''));if(L.married)f.push('💍 '+esc(L.partner)+(ME.spouse?' (खिलाड़ी)':''));if(L.kids)f.push('👶 '+L.kids);if(L.house)f.push('🏠');if(L.car)f.push('🚗');if(L.loan)f.push('🧾 कर्ज़ ₹'+fmt(L.loan));
- h+='<div class="flags">'+f.join(' · ')+'</div>';
+ h+='<div class="flags">'+f.join(' · ')+'</div></div>';
  if(ME.spouse)h+='<button class="btn alt c" id="kid">👶 जीवनसाथी के साथ बच्चा</button>';
- h+='<div style="margin-top:16px"><h3 class="small">📖 जीवन की कहानी</h3>'+L.log.map(function(l){return '<div class="li'+(l.k?' k':'')+'"><b>'+l.a+':</b> '+esc(l.t)+(l.m?' — <span class="small">'+esc(l.m)+'</span>':'')+'</div>'}).join('')+'</div>';
+ h+='<div style="margin-top:16px"><h3 class="small">जीवन की घटनाएँ</h3>'+L.log.map(function(l){return '<div class="li'+(l.k?' k':'')+'"><b>'+l.a+':</b> '+esc(l.t)+(l.m?' — <span class="small">'+esc(l.m)+'</span>':'')+'</div>'}).join('')+'</div>';
  $('app').innerHTML=h;
- document.querySelectorAll('[data-i]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-i]').forEach(function(x){x.disabled=true});S({t:'choose',i:+b.dataset.i})}});
  if($('kid'))$('kid').onclick=function(){S({t:'kid'})};
- if($('nx')){var tk=function(){var rem=Math.max(0,(ME.wait||0)-(Date.now()-lastMeAt));$('nx').disabled=rem>0;$('wt').textContent=rem>0?'⏳ अगला साल '+Math.ceil(rem/1000)+' सेकंड में (सिर्फ ऑनलाइन रहने पर समय चलता है)':''};tk();waitT=setInterval(tk,500);
-  $('nx').onclick=function(){$('nx').disabled=true;S({t:'next'})}}
 }
 function lastLives(){if(!ME.lives||!ME.lives.length)return '';return '<div class="card"><h2>पिछले जीवन</h2>'+ME.lives.map(function(l){return '<div class="li">'+esc(l.name)+' — '+l.age+' साल, '+l.score+'/100 '+esc(l.rating)+'</div>'}).join('')+'</div>'}
 function clockHtml(){return '🌍 विश्व वर्ष <b>'+W.year+'</b>, दिन <b>'+W.day+'</b>/360<br>🟢 सक्रिय खिलाड़ी: <b>'+W.active+'</b> · 👶 जन्म: <b>'+W.births+'</b> · 🕯️ मृत्यु: <b>'+W.deaths+'</b>'}
 function rWorld(){$('app').innerHTML='<div class="card"><h2>🌍 पुणे की दुनिया</h2><p id="wclock">'+clockHtml()+'</p><p class="small">दुनिया हमेशा चलती रहती है — त्योहार, बाढ़, बाज़ार, चुनाव सब पर असर डालते हैं।</p></div><div class="card feed"><h2>📰 लाइव खबरें</h2>'+(W.feed||[]).map(function(f){return '<div class="li"><span class="small">व.'+f.year+' दि.'+f.day+'</span> '+esc(f.text)+'</div>'}).join('')+'</div>'}
-function pRow(p,extra){return '<div class="pl'+(p.online?'':' sl')+'"><div class="av">'+(p.g==='m'?'👦':'👧')+'<i class="'+(p.online?'on':'')+'"></i></div><div class="nm"><b>'+esc(p.name)+'</b><small>'+(p.state==='preg'?'🤰 गर्भ में':p.state==='dead'?'🕯️ अगले जीवन की प्रतीक्षा':p.age+' साल'+(p.job?' · '+esc(p.job):''))+(p.online?' · ऑनलाइन':' · 😴 सो रहे हैं')+'</small></div>'+(extra||'')+'</div>'}
+function pRow(p,extra){return '<div class="pl'+(p.online?'':' sl')+'"><div class="av">'+(p.bot?'🤖':p.g==='m'?'👦':'👧')+'<i class="'+(p.online?'on':'')+'"></i></div><div class="nm"><b>'+esc(p.name)+'</b><small>'+(p.state==='preg'?'🤰 गर्भ में':p.state==='dead'?'🕯️ अगले जीवन की प्रतीक्षा':p.age+' साल'+(p.job?' · '+esc(p.job):''))+(p.bot?' · बॉट':p.online?' · ऑनलाइन':' · 😴 सो रहे हैं')+'</small></div>'+(extra||'')+'</div>'}
 function rPeople(){var h='';
  if(ME.proposals.length)h+='<div class="card rand"><h2>💍 शादी के प्रस्ताव</h2>'+ME.proposals.map(function(r){return '<p><b>'+esc(r.name)+'</b></p><button class="btn sm grn" data-pa="'+r.id+'">स्वीकार</button><button class="btn sm red" data-pd="'+r.id+'">अस्वीकार</button>'}).join('')+'</div>';
  if(ME.friendReq.length)h+='<div class="card"><h2>🤝 दोस्ती के अनुरोध</h2>'+ME.friendReq.map(function(r){return '<p><b>'+esc(r.name)+'</b></p><button class="btn sm grn" data-fa="'+r.id+'">स्वीकार</button><button class="btn sm alt" data-fd="'+r.id+'">मना</button>'}).join('')+'</div>';
@@ -175,8 +179,8 @@ function rPeople(){var h='';
 function showProfile(m){setPanel(true);ZONE=null;tab='people';render();viewP=true;var p=m.p,fr=ME.friends.some(function(f){return f.id===p.id});
  $('app').innerHTML='<div class="card">'+pRow(p)+'<p class="flags">'+(p.married?'💍 '+esc(p.spouse):'अविवाहित')+' · 👶 '+p.kids+' · 🤝 '+p.friends+' दोस्त · पिछले जीवन: '+p.lives+'</p>'+
  m.lives.map(function(l){return '<div class="li">'+l.age+' साल — '+l.score+'/100 '+esc(l.rating)+'</div>'}).join('')+
- '<button class="btn" id="b_msg">💬 संदेश</button><button class="btn" id="b_call">📞 वॉइस कॉल</button>'+(fr?'':'<button class="btn alt" id="b_fr">🤝 दोस्ती का अनुरोध</button>')+(fr&&!ME.spouse&&!p.married?'<button class="btn alt" id="b_pr">💍 शादी का प्रस्ताव</button>':'')+'<button class="btn alt c" id="b_back">← वापस</button></div>';
- $('b_msg').onclick=function(){openChat(p.id)};$('b_call').onclick=function(){startCall(p.id,p.name)};$('b_back').onclick=render;
+ (p.bot?'<p class="small">🤖 यह शहर का बॉट निवासी है। पास जाकर 👋 बात करो!</p>':(fr?'<button class="btn" id="b_msg">💬 संदेश</button><button class="btn" id="b_call">📞 वॉइस कॉल</button>':'<p class="small">संदेश/कॉल सिर्फ दोस्तों से</p>')+(fr?'':'<button class="btn alt" id="b_fr">🤝 दोस्ती का अनुरोध</button>')+'<button class="btn alt c" id="b_bl">'+((ME.blocked||[]).indexOf(p.id)>=0?'✅ अनब्लॉक':'🚫 ब्लॉक')+'</button>')+(fr&&!ME.spouse&&!p.married?'<button class="btn alt" id="b_pr">💍 शादी का प्रस्ताव</button>':'')+'<button class="btn alt c" id="b_back">← वापस</button></div>';
+ if($('b_msg'))$('b_msg').onclick=function(){openChat(p.id)};if($('b_call'))$('b_call').onclick=function(){startCall(p.id,p.name)};if($('b_bl'))$('b_bl').onclick=function(){S({t:'block',id:p.id})};$('b_back').onclick=render;
  if($('b_fr'))$('b_fr').onclick=function(){S({t:'friend',to:p.id})};if($('b_pr'))$('b_pr').onclick=function(){S({t:'propose',to:p.id})};
 }
 function openChat(id){chatWith=id;tab='chat';unread[id]=0;dots();S({t:'hist',with:id});render()}
@@ -190,8 +194,8 @@ function rChat(){
  $('cb').onclick=function(){chatWith=null;render()};$('cc').onclick=function(){startCall(chatWith,nameOf(chatWith))};
  var sendm=function(){var t=$('ci').value.trim();if(!t)return;S({t:'msg',to:chatWith,text:t});$('ci').value=''};$('cs').onclick=sendm;$('ci').onkeydown=function(e){if(e.key==='Enter')sendm()};drawChat()}
 function drawChat(){var c=$('cl');if(!c)return;c.innerHTML=(HIST[chatWith]||[]).map(function(m){return '<div class="bub'+(m.from===ME.id?' me':'')+'">'+esc(m.text)+'</div>'}).join('');c.scrollTop=c.scrollHeight}
-$('pcb').onclick=function(){ZONE=null;setPanel(false)};
-document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){if(b.dataset.city){ZONE=null;setPanel(false);return}ZONE=null;setPanel(true);tab=b.dataset.tab;if(tab!=='chat')chatWith=null;render()}});
+$('pcb').onclick=function(){setPanel(false);render()};
+document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){if(DRAWER&&tab===b.dataset.tab){setPanel(false);render();return}tab=b.dataset.tab;if(tab!=='chat')chatWith=null;setPanel(true);render()}});
 
 /* ---------- WebRTC voice calls (WS signaling) ---------- */
 var C=null; // {peer,name,pc,stream,state,pending:[]}
@@ -227,6 +231,6 @@ function rtc(m){var k=m.kind;
 connect();
 (function(){var b=document.getElementById('qb'),m={auto:'⚙️ ऑटो',hi:'⚙️ HD',lo:'⚙️ हल्का'},n={auto:'hi',hi:'lo',lo:'auto'},c='auto';try{c=localStorage.getItem('zq')||'auto'}catch(e){}b.textContent=m[c];b.onclick=function(){c=n[c];try{localStorage.setItem('zq',c)}catch(e){}toast('क्वालिटी: '+m[c]+' — पेज फिर से लोड हो रहा है');setTimeout(function(){location.reload()},600)}})();
 document.getElementById('lookb').onclick=function(){if(window.openLookPicker&&ME)window.openLookPicker(ME.look||'normal',function(k){S({t:'setLook',look:k})})};
-</script><script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</script><script src="town.js"></script><script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
 <script type="module" src="game3d.js"></script>
 </body></html>

@@ -2,7 +2,7 @@
 // ज़िंदगी ऑनलाइन — authoritative game server (Express + ws)
 const fs=require('fs'),path=require('path'),http=require('http'),crypto=require('crypto');
 const express=require('express');const {WebSocketServer}=require('ws');
-const E=require('./engine');
+const E=require('./engine');const T=require('../public/town.js');
 
 // ---------- config ----------
 const env=process.env;
@@ -16,6 +16,7 @@ const ICE=[{urls:'stun:stun.l.google.com:19302'}];
 if(env.TURN_URL)ICE.push({urls:env.TURN_URL.split(','),username:env.TURN_USER||'',credential:env.TURN_PASS||''});
 const HB_MS=Number(env.HEARTBEAT_MS)||25000; // < Render's idle cutoff (~270s); keeps proxies from dropping idle sockets
 const SIGNUP_DEDUP_MS=Number(env.SIGNUP_DEDUP_MS)||5000;
+const ACT_CD=Number(env.ACT_COOLDOWN_MS)||15000,PUNCH_CD=Number(env.PUNCH_COOLDOWN_MS)||700,NBOTS=env.BOTS!=null?Math.max(0,Math.min(60,Number(env.BOTS)||0)):20;
 const RATE=Number(env.RATE_PER_SEC)||6, RATE_BURST=Number(env.RATE_BURST)||30; // per-connection token bucket
 
 // ---------- persistence (JSON, atomic write) ----------
@@ -27,7 +28,7 @@ function persist(){if(!dirty)return;dirty=false;fs.mkdirSync(path.dirname(DATA),
 setInterval(()=>{try{persist()}catch(e){console.error('persist',e)}},3000).unref();
 
 // ---------- helpers ----------
-const LOOKS=['normal','apara','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10'];const look=v=>{v=v==='hero'?'apara':v==='heroine'?'h1':v;return LOOKS.includes(v)?v:'normal'}; // original fictional looks only
+const LOOKS=['normal','kurta','shirt','salwar','saree','apara','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10'];const look=v=>{v=v==='hero'?'apara':v==='heroine'?'h1':v;return LOOKS.includes(v)?v:'normal'}; // original fictional looks only
 const clean=(s,n)=>String(s==null?'':s).replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,n);
 const uid=()=>crypto.randomBytes(6).toString('hex');
 const now=()=>Date.now();
@@ -68,7 +69,7 @@ function worldEvent(){const e=WEV[Math.floor(Math.random()*WEV.length)];
 function pub(p){return {id:p.id,name:p.name,g:p.g,look:look(p.look),online:isOnline(p.id),state:p.state,
  age:p.life?p.life.age:0,job:p.life?p.life.job:'',married:!!p.spouse,spouse:p.spouse&&db.players[p.spouse]?db.players[p.spouse].name:'',
  kids:p.life?p.life.kids:0,lives:p.lives.length,friends:p.friends.length}}
-function playersList(){return Object.values(db.players).map(pub).sort((a,b)=>b.online-a.online)}
+function playersList(){return Object.values(db.players).map(pub).concat(BOTS.map(botPub)).sort((a,b)=>b.online-a.online)}
 let plTimer=null;function pushPlayers(){clearTimeout(plTimer);plTimer=setTimeout(()=>bcast({t:'players',list:playersList()}),200)}
 function worldView(){const w=db.world;return {day:w.day,year:w.year,births:w.births,deaths:w.deaths,active:socks.size,
  total:Object.keys(db.players).length,feed:w.feed.slice(0,30),npcs:w.npcs.length}}
@@ -80,16 +81,24 @@ function view(p){
  if(p.state==='alive'&&p.life){const L=p.life;
   v.life={age:L.age,money:L.money,h:L.h,j:L.j,r:L.r,edu:E.EDU[L.edu],job:L.job,inc:L.inc,married:L.married,partner:L.partner,kids:L.kids,house:L.house,car:L.car,inv:L.inv,loan:L.loan||0,
    gameYear:Math.min(5,1+Math.floor(L.age/20)),log:L.log.slice(0,30),res:L.res,rnd:L.rnd,yd:L.yd};
-  if(L.cur){const ev=E.curEv(L);v.life.ev={t:E.txt(ev.t,L),o:ev.o.filter(o=>E.okOpt(o,L)).map(o=>E.txt(o.t,L))}}
+  v.life.study=L.study||0;v.cd=p.cd||{};v.blocked=p.blocked||[];
   v.wait=p.admin?0:Math.max(0,p.lastTurnMs+TURN_MS-activeNow(p))}
  if(p.state==='dead')v.summary=p.lives[p.lives.length-1];
  return v}
 function pushMe(p){sendTo(p.id,view(p))}
 function startLife(p){
- const L=E.newGame(p.name,p.g);L.started=true;E.nextYear(L);p.life=L;p.state='alive';p.lastTurnMs=p.activeMs;
+ const L=E.newGame(p.name,p.g);L.started=true;E.nextYear(L);if(L.cur){E.choose(L,Math.floor(Math.random()*E.curEv(L).o.length));E.nextYear(L);if(L.cur&&L.age<5){}}p.life=L;p.state='alive';p.lastTurnMs=p.activeMs;
  // existing multiplayer spouse carries over
  if(p.spouse&&db.players[p.spouse]){L.married=true;L.partner=db.players[p.spouse].name}
  db.world.births++;feed('👶 '+p.name+' का जन्म हुआ! (पुणे, बरसाती जुलाई रात)','birth');mark()}
+function advanceYear(p){const L=p.life,out=[];
+ if(L.cur){const ev=E.curEv(L),n=ev.o.filter(o=>E.okOpt(o,L)).length;const r=E.choose(L,Math.floor(Math.random()*n));if(r&&r.msg)out.push(r.msg)}
+ if(L.dead)return finishLife(p);
+ p.lastTurnMs=Math.max(p.lastTurnMs+TURN_MS,activeNow(p)-TURN_MS*5);socialBonus(p);E.nextYear(L);if(p.spouse&&db.players[p.spouse]){L.married=true;L.partner=db.players[p.spouse].name}
+ if(p.spouse&&!L.married)divorce(p);
+ if(L.dead)return finishLife(p);
+ if(L.rnd)out.unshift((L.rnd.g?'🍀 ':'⚠️ ')+L.rnd.t+(L.rnd.m?' '+L.rnd.m:''));
+ sendTo(p.id,{t:'life',text:'🎂 अब तुम '+L.age+' साल के हो!'+(out.length?' '+out.join(' '):'')});mark();pushMe(p);pushPlayers()}
 function finishLife(p){const L=p.life;if(!L)return;
  const sc=E.score(L);const sum={name:p.name,age:L.age,cause:L.cause,edu:E.EDU[L.edu],job:L.job||'—',married:L.married,partner:L.partner,kids:L.kids,house:L.house,
   wealth:L.money+(L.inv||0),score:sc,rating:E.rating(sc),hl:L.hl.slice(0,40),ended:now()};
@@ -101,24 +110,16 @@ function socialBonus(p){const L=p.life;if(!L)return;const on=p.friends.filter(is
 
 // ---------- action handlers (all validated server-side) ----------
 const H={
- choose(p,m){if(p.state!=='alive'||!p.life||!p.life.cur)return err(p,'अभी कोई विकल्प नहीं');
-  const ev=E.curEv(p.life),n=ev.o.filter(o=>E.okOpt(o,p.life)).length;const i=m.i|0;if(i<0||i>=n)return err(p,'गलत विकल्प');
-  E.choose(p.life,i);
-  if(p.spouse&&!p.life.married){divorce(p)} // engine-driven divorce
-  if(p.life.dead)return finishLife(p);mark();pushMe(p)},
- next(p){if(p.state!=='alive'||!p.life||p.life.cur)return;
-  if(!p.admin&&activeNow(p)-p.lastTurnMs<TURN_MS)return err(p,'अगला साल अभी नहीं आया — थोड़ा रुको');
-  p.lastTurnMs=activeNow(p);socialBonus(p);E.nextYear(p.life);
-  if(p.spouse&&db.players[p.spouse]){p.life.married=true;p.life.partner=db.players[p.spouse].name}
-  if(p.life.dead)return finishLife(p);mark();pushMe(p);pushPlayers()},
- newlife(p){if(p.state!=='dead')return;p.state='preg';p.pregStart=now();mark();pushMe(p);feed('🤰 '+p.name+' एक नए जीवन की प्रतीक्षा में है।','preg');if(p.admin){startLife(p);pushMe(p);pushPlayers()}},
- msg(p,m){const to=db.players[m.to];const text=clean(m.text,500);if(!to||to.id===p.id||!text)return err(p,'संदेश नहीं भेजा जा सका');
+ next(p){if(!p.admin||p.state!=='alive'||!p.life)return;advanceYear(p)},
+ newlife(p){if(p.state!=='dead')return;p.state='preg';p.pregStart=now();mark();pushMe(p);feed('🤰 '+p.name+' एक नए जीवन की प्रतीक्षा में है (तब तक शहर घूम सकते हैं)।','preg');if(p.admin){startLife(p);pushMe(p);pushPlayers()}},
+ msg(p,m){const bt=BOTS.find(b=>b.id===m.to);if(bt){const text=clean(m.text,500);if(!text)return;const it={from:p.id,to:bt.id,text,ts:now()};send(socks.get(p.id),{t:'msg',m:it});setTimeout(()=>sendTo(p.id,{t:'msg',m:{from:bt.id,to:p.id,text:pickL(BOT_REPLY),ts:now()},fromName:bt.name}),1200);return}
+  const to=db.players[m.to];if(to&&((to.blocked||[]).includes(p.id)||(p.blocked||[]).includes(to.id)))return err(p,'🚫 यह बातचीत ब्लॉक है');if(to&&!p.friends.includes(to.id))return err(p,'संदेश सिर्फ दोस्तों को — पहले दोस्ती करो 🤝');const text=clean(m.text,500);if(!to||to.id===p.id||!text)return err(p,'संदेश नहीं भेजा जा सका');
   const k=pkey(p.id,to.id);const arr=db.msgs[k]||(db.msgs[k]=[]);const it={from:p.id,to:to.id,text,ts:now()};arr.push(it);if(arr.length>200)arr.splice(0,arr.length-200);
   // small relationship boost, max once per turn per pair
   if(p.life&&p.life.lastMsgBoost!==p.life.age){p.life.lastMsgBoost=p.life.age;p.life.r=E.cl(p.life.r+1)}
   mark();send(socks.get(p.id),{t:'msg',m:it});sendTo(to.id,{t:'msg',m:it,fromName:p.name})},
  hist(p,m){const k=pkey(p.id,clean(m.with,20));send(socks.get(p.id),{t:'hist',with:m.with,msgs:(db.msgs[k]||[]).slice(-100)})},
- friend(p,m){const to=db.players[m.to];if(!to||to.id===p.id||p.friends.includes(to.id))return;
+ friend(p,m){if(BOTS.some(b=>b.id===m.to))return notif(p,'🤖 बॉट से दोस्ती नहीं होती — असली खिलाड़ियों से करो!');const to=db.players[m.to];if(!to||(to.blocked||[]).includes(p.id)||to.id===p.id||p.friends.includes(to.id))return;
   if(p.friendReq.includes(to.id))return H.friendResp(p,{from:to.id,ok:true});
   if(!to.friendReq.includes(p.id))to.friendReq.push(p.id);mark();sendTo(to.id,{t:'notif',text:'🤝 '+p.name+' ने दोस्ती का अनुरोध भेजा'});pushMe(to);notif(p,'अनुरोध भेजा गया')},
  friendResp(p,m){const f=db.players[m.from];const i=p.friendReq.indexOf(m.from);if(!f||i<0)return;p.friendReq.splice(i,1);
@@ -144,10 +145,34 @@ const H={
   db.world.births++;feed('👶 '+p.name+' और '+s.name+' के घर '+kn+' का जन्म!','birth');mark();pushMe(p);pushMe(s);pushPlayers()},
  rtc(p,m){const kinds=['ring','accept','decline','hangup','offer','answer','ice','busy'];if(!kinds.includes(m.kind))return;
   const to=db.players[m.to];if(!to)return;if(!isOnline(to.id)){if(m.kind==='ring')send(socks.get(p.id),{t:'rtc',from:to.id,kind:'unavailable'});return}
+  if(m.kind==='ring'&&(!p.friends.includes(to.id)||(to.blocked||[]).includes(p.id)))return err(p,'कॉल सिर्फ दोस्तों को');
   const data=m.data===undefined?null:m.data;if(JSON.stringify(data||'').length>20000)return;
   sendTo(to.id,{t:'rtc',from:p.id,fromName:p.name,kind:m.kind,data})},
- profile(p,m){const t=db.players[m.id];if(!t)return;send(socks.get(p.id),{t:'profile',p:pub(t),lives:t.lives.slice(-3).map(l=>({age:l.age,score:l.score,rating:l.rating,cause:l.cause}))})},
+ profile(p,m){const bt=BOTS.find(b=>b.id===m.id);if(bt)return send(socks.get(p.id),{t:'profile',p:botPub(bt),lives:[]});const t=db.players[m.id];if(!t)return;send(socks.get(p.id),{t:'profile',p:pub(t),lives:t.lives.slice(-3).map(l=>({age:l.age,score:l.score,rating:l.rating,cause:l.cause}))})},
  setLook(p,m){p.look=look(m.look);mark();pushMe(p);pushPlayers()},
+ block(p,m){const id=clean(m.id,20);if(!db.players[id]||id===p.id)return;p.blocked=p.blocked||[];const i=p.blocked.indexOf(id);if(i<0)p.blocked.push(id);else p.blocked.splice(i,1);
+  const fi=p.friends.indexOf(id);if(i<0&&fi>=0){p.friends.splice(fi,1);const o=db.players[id];o.friends=o.friends.filter(x=>x!==p.id);pushMe(o)}mark();pushMe(p);notif(p,i<0?'🚫 ब्लॉक किया':'✅ अनब्लॉक किया')},
+ act(p,m){if(p.state!=='alive'||!p.life)return err(p,'अभी जीवन शुरू नहीं हुआ');const z=T.ZONES.find(z=>z.id===m.z);if(!z)return;
+  const ps=POS.get(p.id);if(!ps||Math.hypot(ps.x-z.x,ps.z-z.z)>6)return err(p,'पहले '+z.n+' तक चलकर जाओ');
+  p.cd=p.cd||{};const t=now(),k=z.act;if(!p.admin&&p.cd[k]&&t<p.cd[k])return err(p,'थोड़ा रुको — '+Math.ceil((p.cd[k]-t)/1000)+' सेकंड');
+  const L=p.life,g=[];const st=(f,d,lbl)=>{if(!d)return;if(f==='money')L.money+=d;else L[f]=E.cl(L[f]+d);g.push((d>0?'+':'')+(f==='money'?'₹'+d:d)+' '+lbl)};
+  if(k==='study'){if(L.age<4)return err(p,'अभी बहुत छोटे हो 👶');L.study=(L.study||0)+1;g.push('+1 पढ़ाई 📚');st('j',-1,'खुशी')}
+  else if(k==='work'){if(L.age<14){st('money',100,'पैसा');st('j',1,'खुशी')}else{st('money',Math.max(500,Math.round((L.inc||60000)/150/100)*100),'पैसा');st('h',-1,'सेहत')}}
+  else if(k==='heal'){st('h',6,'सेहत');if(L.age>=18)st('money',-1500,'पैसा')}
+  else if(k==='rest'){st('j',5,'खुशी');st('h',1,'सेहत')}
+  else if(k==='sport'){st('h',4,'सेहत');st('j',3,'खुशी')}
+  p.cd[k]=t+ACT_CD;mark();send(socks.get(p.id),{t:'gain',text:g.join('  '),cd:p.cd});pushMe(p);bcast({t:'fx',k:'act',id:p.id})},
+ talk(p,m){if(p.state!=='alive'||!p.life)return;const a=POS.get(p.id),b=POS.get(m.to)||(BOTS.find(x=>x.id===m.to)||null);if(!a||!b||Math.hypot(a.x-b.x,a.z-b.z)>4)return err(p,'पास जाकर बात करो');
+  p.cd=p.cd||{};const t=now();if(!p.admin&&p.cd.talk&&t<p.cd.talk)return err(p,'थोड़ा रुको');p.cd.talk=t+ACT_CD;p.life.r=E.cl(p.life.r+3);p.life.j=E.cl(p.life.j+1);
+  mark();send(socks.get(p.id),{t:'gain',text:'+3 रिश्ते 🤝  +1 खुशी',cd:p.cd});pushMe(p);bcast({t:'fx',k:'wave',id:p.id});
+  const bt=BOTS.find(x=>x.id===m.to);if(bt){botFace(bt,a);botSay(bt,pickL(BOT_HI))}else sendTo(m.to,{t:'notif',text:'👋 '+p.name+' ने तुमसे बात की'})},
+ punch(p){const a=POS.get(p.id);if(!a)return;const t=now();if(p.lastPunch&&t-p.lastPunch<PUNCH_CD)return;p.lastPunch=t;
+  bcast({t:'fx',k:'punch',id:p.id});if(safeAt(a.x,a.z))return notif(p,'🙏 यहाँ मारपीट मना है');
+  const fx=Math.sin(a.ry),fz=Math.cos(a.ry);let best=null,bd=1.6;
+  const cand=[...POS].map(([id,o])=>({id,x:o.x,z:o.z})).concat(BOTS.map(b=>({id:b.id,x:b.x,z:b.z,bot:b})));
+  for(const c of cand){if(c.id===p.id)continue;const dx=c.x-a.x,dz=c.z-a.z,d=Math.hypot(dx,dz);if(d<bd&&d>0.01&&(dx*fx+dz*fz)/d>0.4){bd=d;best=c}}
+  if(!best)return;const dx=(best.x-a.x)/bd,dz=(best.z-a.z)/bd;bcast({t:'fx',k:'hit',id:best.id,from:p.id,dx:+dx.toFixed(2),dz:+dz.toFixed(2)});
+  if(best.bot)return botHit(best.bot,p,dx,dz);const v=db.players[best.id];if(v&&v.life&&v.state==='alive'){v.life.h=Math.max(10,v.life.h-2);sendTo(v.id,{t:'gain',text:'-2 सेहत 🤕 ('+p.name+' का पंच)'});pushMe(v)}},
  ping(p){send(socks.get(p.id),{t:'pong'})}
 };
 function divorce(p){const s=db.players[p.spouse];p.spouse=null;if(s){s.spouse=null;if(s.life){s.life.married=false;s.life.partner='';s.life.j=E.cl(s.life.j-15)}pushMe(s);feed('💔 '+p.name+' और '+s.name+' का तलाक हो गया।','info')}}
@@ -155,14 +180,48 @@ function err(p,text){send(socks.get(p.id),{t:'err',text})}
 function notif(p,text){send(socks.get(p.id),{t:'notif',text})}
 
 // ---------- live positions (3D presence; memory only, never persisted) ----------
-const MAP=Number(env.MAP_HALF)||90;const POS=new Map(); // id -> {x,z,ry,t,ch}
+const MAP=Number(env.MAP_HALF)||T.HALF;const POS=new Map(); // id -> {x,z,ry,t,ch}
 function onPos(p,m){const t=now(),o=POS.get(p.id);if(o&&t-o.t<90)return; // ~10/s max per player
  const f=(v,a)=>{v=Number(v);return Number.isFinite(v)?Math.max(-a,Math.min(a,v)):0};
- POS.set(p.id,{x:Math.round(f(m.x,MAP)*100)/100,z:Math.round(f(m.z,MAP)*100)/100,ry:Math.round(f(m.ry,7)*100)/100,t,ch:true})}
-setInterval(()=>{if(!POS.size)return;let changed=false;const list=[];
- for(const [id,o] of POS){if(!isOnline(id)){POS.delete(id);continue}const p=db.players[id];if(!p)continue;if(o.ch)changed=true;o.ch=false;
-  list.push({id,x:o.x,z:o.z,ry:o.ry,n:p.name,g:p.g,l:look(p.look),a:p.life?p.life.age:0})}
- if(changed||Math.random()<.1)bcast({t:'poses',list});},125).unref();
+ let ry=Number(m.ry);ry=Number.isFinite(ry)?Math.atan2(Math.sin(ry),Math.cos(ry)):0;POS.set(p.id,{x:Math.round(f(m.x,MAP)*100)/100,z:Math.round(f(m.z,MAP)*100)/100,ry:Math.round(ry*100)/100,s:m.s?1:0,t,ch:true})}
+let fullAt=0;
+setInterval(()=>{const t=now(),full=t-fullAt>1500;if(full)fullAt=t;const list=[];
+ for(const [id,o] of POS){if(!isOnline(id)){POS.delete(id);continue}const p=db.players[id];if(!p)continue;if(!o.ch&&!full)continue;o.ch=false;
+  list.push({id,x:o.x,z:o.z,ry:o.ry,s:o.s,n:p.name,g:p.g,l:look(p.look),a:p.life?p.life.age:0})}
+ for(const b of BOTS){if(!b.ch&&!full)continue;b.ch=false;list.push({id:b.id,x:+b.x.toFixed(2),z:+b.z.toFixed(2),ry:+b.ry.toFixed(2),s:b.sit?1:0,n:b.name,g:b.g,l:b.look,a:b.age,b:1})}
+ if(list.length&&socks.size)bcast({t:'poses',list});},125).unref();
+function safeAt(x,z){return T.ZONES.some(q=>q.safe&&Math.hypot(x-q.x,z-q.z)<14)}
+
+// ---------- bots: server-side NPC residents walking a waypoint graph (5 Hz) ----------
+const pickL=a=>a[Math.floor(Math.random()*a.length)];
+const BOT_NAMES={m:['राजू','विक्की','सोनू भैया','अर्जुन','कबीर','रोहित','इमरान','गणेश काका','मोहन','दीपक','सलमान','करण'],f:['पिंकी','नेहा','सीमा दीदी','आयशा','लता ताई','पूजा','रीना','सावित्री आजी','कविता','अंजलि','फ़ातिमा','सिया']};
+const BOT_LOOK_F=['normal','salwar','saree','salwar','saree','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10'],BOT_LOOK_M=['normal','kurta','shirt','kurta','shirt','apara'];
+const BOT_HI=['नमस्ते! 🙏','क्या हाल है भाई?','चाय पीने चलें? ☕','आज मौसम मस्त है!','अरे, तुम नए हो क्या?','बाज़ार में आज भीड़ है','मैदान पे क्रिकेट खेलें? 🏏','राम राम जी!'];
+const BOT_IDLE=['हाय गर्मी! 🥵','बस आ रही होगी…','मंदिर में आरती का टाइम हो गया','आलू 40 रुपये किलो!?','पढ़ाई करनी है यार 📚','चलो पार्क चलते हैं 🌳'];
+const BOT_OW=['अरे! मारते क्यों हो? 😠','ओये! धीरे भाई!','आह! मम्मी! 😵','चलो, मैं जा रहा हूँ यहाँ से…','पुलिस बुलाऊँ क्या? 🚓'];
+const BOT_REPLY=['🤖 मैं बॉट हूँ, पर बात अच्छी लगी!','हाहा 😄','ठीक है जी 🙏','शहर में मिलते हैं!'];
+const BOTS=[];
+function botPub(b){return {id:b.id,name:'🤖 '+b.name,g:b.g,look:b.look,online:true,state:'alive',age:b.age,job:'',married:false,spouse:'',kids:0,lives:0,friends:0,bot:true}}
+function botSay(b,text){bcast({t:'say',id:b.id,text})}
+function botFace(b,a){b.ry=Math.atan2(a.x-b.x,a.z-b.z);b.ch=true;b.wait=Math.max(b.wait,2);b.sit=false;b.path=null}
+function botHit(b,p,dx,dz){b.x=Math.max(-T.HALF,Math.min(T.HALF,b.x+dx*1.2));b.z=Math.max(-T.HALF,Math.min(T.HALF,b.z+dz*1.2));b.sit=false;b.ch=true;b.wait=1.2;b.path=null;
+ if(Math.random()<.7)setTimeout(()=>botSay(b,pickL(BOT_OW)),400);b.flee=true}
+for(let i=0;i<NBOTS;i++){const g=i%2?'f':'m',n=T.NODES[Math.floor(Math.random()*T.NODES.length)];
+ BOTS.push({id:'bot'+i,name:BOT_NAMES[g][Math.floor(i/2)%12],g,look:pickL(g==='f'?BOT_LOOK_F:BOT_LOOK_M),age:16+Math.floor(Math.random()*50),x:n[0]+(Math.random()-.5),z:n[1],ry:0,node:T.NODES.indexOf(n),tgt:null,wait:Math.random()*3,sit:false,ch:true,sp:1.3+Math.random()*.5})}
+function botTick(dt){for(const b of BOTS){
+ if(b.wait>0){b.wait-=dt;if(b.wait<=0&&b.sit){b.sit=false;b.ch=true}continue}
+ if(!b.tgt){ // choose next node (random walk on graph); occasionally approach a nearby real player
+  let pl=null;if(Math.random()<.04)for(const [id,o] of POS){if(Math.hypot(o.x-b.x,o.z-b.z)<20){pl=o;break}}
+  if(pl&&!b.flee){b.tgt=[pl.x,pl.z];b.greet=true}else{const nb=T.EDGES[b.node];const nx=b.flee&&nb.length>1?nb[Math.floor(Math.random()*nb.length)]:nb[Math.floor(Math.random()*nb.length)];b.flee=false;b.node=nx;b.tgt=T.NODES[nx]}}
+ const dx=b.tgt[0]-b.x,dz=b.tgt[1]-b.z,d=Math.hypot(dx,dz),stop=b.greet?1.8:.2;
+ if(d<=stop+.05){b.tgt=null;
+  if(b.greet){b.greet=false;b.wait=3;botSay(b,pickL(BOT_HI));bcast({t:'fx',k:'wave',id:b.id});continue}
+  const bench=T.BENCH.find(q=>q.node===b.node);if(bench&&Math.random()<.6){b.x=bench[0];b.z=bench[1];b.ry=bench[2];b.sit=true;b.wait=8+Math.random()*14;b.ch=true;continue}
+  const z=T.ZONES.find(q=>q.node===b.node);if(z){b.wait=3+Math.random()*5;if(Math.random()<.5)bcast({t:'fx',k:'act',id:b.id});else if(Math.random()<.3)botSay(b,pickL(BOT_IDLE))}
+  continue}
+ const st=Math.min(d-stop,b.sp*dt);b.x+=dx/d*st;b.z+=dz/d*st;b.ry=Math.atan2(dx,dz);b.ch=true}}
+let botLast=now();setInterval(()=>{const t=now();botTick(Math.min(1,(t-botLast)/1000));botLast=t},200).unref();
+setInterval(()=>{if(BOTS.length&&socks.size&&Math.random()<.5){const b=pickL(BOTS);botSay(b,pickL(BOT_IDLE))}},9000).unref();
 
 // ---------- HTTP + WS ----------
 const app=express();app.disable('x-powered-by');
@@ -191,8 +250,8 @@ wss.on('connection',(ws,req)=>{
     const gi=m.g==='f'?'f':m.g==='m'?'m':'r',dk=ip+'|'+name+'|'+gi,rec=recentSignups.get(dk);
     if(rec&&now()-rec.t<SIGNUP_DEDUP_MS&&db.players[rec.id])m={t:'hello',token:db.players[rec.id].token}; // same name+gender from same IP within window = same account
     else{const g=gi==='r'?(Math.random()<.5?'m':'f'):gi;
-    const p={id:uid(),token:crypto.randomBytes(18).toString('hex'),name,g,created:now(),pregStart:now(),state:'preg',life:null,lives:[],activeMs:0,lastTurnMs:0,friends:[],friendReq:[],proposals:[],spouse:null,look:look(m.look)};
-    db.players[p.id]=p;mark();recentSignups.set(dk,{id:p.id,t:now()});m={t:'hello',token:p.token};feed('🤰 एक नया जीव पुणे में आने वाला है: '+name,'preg')}}}
+    const p={blocked:[],id:uid(),token:crypto.randomBytes(18).toString('hex'),name,g,created:now(),pregStart:now(),state:'preg',life:null,lives:[],activeMs:0,lastTurnMs:0,friends:[],friendReq:[],proposals:[],spouse:null,look:look(m.look)};
+    db.players[p.id]=p;startLife(p);recentSignups.set(dk,{id:p.id,t:now()});m={t:'hello',token:p.token}}}}
    if(m.t==='hello'){const p=Object.values(db.players).find(x=>x.token===String(m.token||''));if(!p)return send(ws,{t:'auth_fail'});
     if(me&&me.id!==p.id)detach(ws,me); // socket switched accounts: previous account goes offline
     const old=socks.get(p.id);if(old&&old!==ws){socks.delete(p.id);send(old,{t:'err',text:'दूसरी जगह से लॉगिन हुआ'});try{old.close()}catch(e){}}
@@ -221,6 +280,7 @@ function activeNow(p){return p.activeMs+(socks.has(p.id)?now()-last:0)}
 setInterval(()=>{const t=now(),dt=t-last;last=t;
  for(const id of socks.keys()){const p=db.players[id];if(p)p.activeMs+=dt} // only ACTIVE players' life clocks run
  for(const p of Object.values(db.players))if(p.state==='preg'&&t>=p.pregStart+PREG_MS){startLife(p);pushMe(p);pushPlayers()}
+ for(const id of socks.keys()){const p=db.players[id];if(!p||p.state!=='alive'||!p.life)continue;for(let k=0;k<5&&p.state==='alive'&&activeNow(p)-p.lastTurnMs>=TURN_MS;k++)advanceYear(p)}
  const w=db.world;if(t-w.lastDay>500*WORLD_DAY_MS)w.lastDay=t-WORLD_DAY_MS;while(t-w.lastDay>=WORLD_DAY_MS){w.lastDay+=WORLD_DAY_MS;w.day++;
   if(w.day>=360){w.day=0;w.year++;w.npcs.forEach(n=>n.age++);feed('🎆 विश्व वर्ष '+w.year+' शुरू हुआ!','year')}
   if(Math.random()<.15)npcTick();if(Math.random()<.04)worldEvent();mark()}

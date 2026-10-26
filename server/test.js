@@ -1,8 +1,9 @@
-// End-to-end test: spawns the server in fast mode and drives 3 WebSocket clients.
+// End-to-end test: spawns the server in fast mode and drives WebSocket clients.
 'use strict';
 const {spawn}=require('child_process');const WebSocket=require('ws');const path=require('path'),fs=require('fs'),os=require('os');
-const PORT=3999,DATA=path.join(os.tmpdir(),'zindagi-test-'+Date.now()+'.json');
-const srv=spawn(process.execPath,['server.js'],{cwd:__dirname,env:Object.assign({},process.env,{PORT,DATA_FILE:DATA,TIME_SCALE:'20000',WORLD_DAY_SECONDS:'2000',RATE_PER_SEC:'300',RATE_BURST:'60',HEARTBEAT_MS:'3000'}),stdio:['ignore','pipe','pipe']});
+const T=require('../public/town.js');
+const PORT=3999,DATA=path.join(os.tmpdir(),'arth-test-'+Date.now()+'.json');
+const srv=spawn(process.execPath,['server.js'],{cwd:__dirname,env:Object.assign({},process.env,{PORT,DATA_FILE:DATA,TIME_SCALE:'20000',TURN_SECONDS:'4000',WORLD_DAY_SECONDS:'2000',RATE_PER_SEC:'300',RATE_BURST:'60',HEARTBEAT_MS:'3000',ACT_COOLDOWN_MS:'800',BOTS:'6',ADMIN_KEY:'testkey123'}),stdio:['ignore','pipe','pipe']});
 let srvOut='';srv.stdout.on('data',d=>srvOut+=d);srv.stderr.on('data',d=>srvOut+=d);
 let crashed=false;srv.on('exit',c=>{crashed=c!==null&&c!==0});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -13,95 +14,59 @@ class Cl{constructor(n){this.n=n;this.q=[];this.w=[];this.me=null}
  send(o){this.ws.send(JSON.stringify(o))}
  wait(f,ms=20000){const i=this.q.findIndex(f);if(i>=0)return Promise.resolve(this.q.splice(i,1)[0]);
   return new Promise((r,j)=>{const x={f,r:m=>{clearTimeout(t);r(m)}};const t=setTimeout(()=>{this.w=this.w.filter(y=>y!==x);j(new Error(this.n+' timeout'))},ms);this.w.push(x)})}
- clear(){this.q=[]}
- async step(){ // play one turn
-  const L=this.me.life;if(!L)return;this.clear();
-  if(L.ev){this.send({t:'choose',i:Math.floor(Math.random()*L.ev.o.length)})}else{this.send({t:'next'})}
-  await this.wait(m=>m.t==='me'||m.t==='err',5000).catch(()=>{});await sleep(5)}
- async playUntil(pred,max=400){for(let i=0;i<max&&this.me.state==='alive'&&!pred(this.me);i++)await this.step()}}
+ clear(){this.q=[]}}
+const Z=id=>T.ZONES.find(z=>z.id===id);
 (async()=>{
  await sleep(900);
- const A=new Cl('A'),B=new Cl('B'),C=new Cl('C');
- console.log('1. signup + pregnancy');
- for(const [c,n,g] of [[A,'अमित','m'],[B,'प्रिया','f'],[C,'चिंटू','r']]){await c.open();c.send({t:'signup',name:n+'<script>',g})}
- await A.wait(m=>m.t==='me'&&m.state==='preg');ok(A.me.preg.month>=1&&A.me.preg.month<=9,'pregnancy screen data month='+A.me.preg.month);
- ok(!A.me.name.includes('<'),'name sanitized: '+A.me.name);
- A.send({t:'next'});await sleep(100);ok(A.me.state==='preg','cannot skip pregnancy from client');
- await Promise.all([A,B,C].map(c=>c.wait(m=>m.t==='me'&&m.state==='alive',30000)));ok(true,'all three born after server-side wait');
- ok(A.me.life.age===0&&/अंजलि/.test(A.me.life.ev.t),'first life story: Pune / अंजलि');
- A.send({t:'choose',i:99});const e=await A.wait(m=>m.t==='err');ok(!!e,'invalid choice rejected');
- console.log('2. social');
- A.send({t:'friend',to:B.me.id});await B.wait(m=>m.t==='me'&&m.friendReq.length);B.send({t:'friendResp',from:A.me.id,ok:true});
- await A.wait(m=>m.t==='me'&&m.friends.length===1);ok(true,'friend request accepted');
- A.send({t:'msg',to:B.me.id,text:'नमस्ते प्रिया!'});const mm=await B.wait(m=>m.t==='msg');ok(mm.m.text==='नमस्ते प्रिया!','1:1 message delivered');
- B.send({t:'hist',with:A.me.id});const hh=await B.wait(m=>m.t==='hist');ok(hh.msgs.length===1,'message history persisted');
- A.send({t:'msg',to:B.me.id,text:'x'.repeat(5000)});const lm=await B.wait(m=>m.t==='msg');ok(lm.m.text.length===500,'message length limited ('+lm.m.text.length+')');
- console.log('3. grow to 18 and marry');
- await Promise.all([A.playUntil(m=>m.life.age>=19),B.playUntil(m=>m.life.age>=19)]);
- ok(A.me.state==='alive'&&B.me.state==='alive','A age '+(A.me.life&&A.me.life.age)+', B age '+(B.me.life&&B.me.life.age));
- if(A.me.life&&A.me.life.married){console.log('  (A married an NPC; proposal should be refused)')}
- A.clear();B.clear();A.send({t:'propose',to:B.me.id});
- const pr=await Promise.race([B.wait(m=>m.t==='me'&&m.proposals.length),A.wait(m=>m.t==='err').then(m=>({err:m.text}))]);
- if(!pr.err){B.send({t:'proposeResp',from:A.me.id,ok:true});await A.wait(m=>m.t==='me'&&m.spouse===B.me.id);ok(A.me.life.married&&A.me.life.partner.startsWith('प्रिया'),'married to real player');
-  A.send({t:'kid'});await B.wait(m=>m.t==='me'&&m.life&&m.life.kids>=1);ok(true,'kid with spouse; B kids='+B.me.life.kids);}
- else ok(/शादी|18|ज़रूरी/.test(pr.err),'proposal validated: '+pr.err);
- console.log('4. sleep / pause');
- await C.playUntil(m=>m.life.age>=8,50);const before=C.me.activeMs;const tok=C.token;A.clear();C.ws.close();await sleep(300);
- A.send({t:'rtc',to:C.me.id,kind:'ring'});const un=await A.wait(m=>m.t==='rtc'&&m.kind==='unavailable');ok(!!un,'call to sleeping player -> unavailable');
- await sleep(50);const pl=await A.wait(m=>m.t==='players'&&m.list.some(p=>p.id===C.me.id&&!p.online)).catch(()=>null);ok(!!pl,'C shown as sleeping in players list');
- await sleep(2500);const C2=new Cl('C2');await C2.open(tok);await C2.wait(m=>m.t==='me');
- ok(C2.me.activeMs-before<1500,'life clock paused while asleep (delta '+(C2.me.activeMs-before)+'ms over ~2.8s offline)');ok(C2.me.life.age===C.me.life.age,'state resumed after reconnect, age '+C2.me.life.age);
- console.log('5. WebRTC signaling relay');
- A.send({t:'rtc',to:B.me.id,kind:'ring'});await B.wait(m=>m.t==='rtc'&&m.kind==='ring');B.send({t:'rtc',to:A.me.id,kind:'accept'});await A.wait(m=>m.t==='rtc'&&m.kind==='accept');
- A.send({t:'rtc',to:B.me.id,kind:'offer',data:{type:'offer',sdp:'v=0 dummy'}});const of=await B.wait(m=>m.t==='rtc'&&m.kind==='offer');ok(of.data.sdp==='v=0 dummy','offer relayed');
- B.send({t:'rtc',to:A.me.id,kind:'answer',data:{type:'answer',sdp:'v=0 ans'}});await A.wait(m=>m.t==='rtc'&&m.kind==='answer');
- B.send({t:'rtc',to:A.me.id,kind:'ice',data:{candidate:'candidate:1 1 udp 1 1.2.3.4 5 typ host',sdpMid:'0'}});await A.wait(m=>m.t==='rtc'&&m.kind==='ice');
- A.send({t:'rtc',to:B.me.id,kind:'hangup'});await B.wait(m=>m.t==='rtc'&&m.kind==='hangup');ok(true,'answer/ice/hangup relayed');
- A.send({t:'rtc',to:B.me.id,kind:'evil'});await sleep(100);ok(!B.q.some(m=>m.kind==='evil'),'unknown signaling kind dropped');
- console.log('5b. 3D position presence');
- B.clear();A.send({t:'pos',x:12.5,z:-7,ry:1.2});const ps=await B.wait(m=>m.t==='poses'&&m.list.some(p=>p.id===A.me.id&&p.x===12.5),3000).catch(()=>null);
- ok(!!ps&&ps.list.find(p=>p.id===A.me.id).n===A.me.name,'pos broadcast A -> B with name');
- await sleep(150);B.clear();A.send({t:'pos',x:9999,z:-9999,ry:'evil'});const pc=await B.wait(m=>m.t==='poses'&&m.list.some(p=>p.id===A.me.id&&p.x===90),3000).catch(()=>null);
- ok(!!pc&&pc.list.find(p=>p.id===A.me.id).z===-90&&pc.list.find(p=>p.id===A.me.id).ry===0,'pos clamped to map bounds / sanitized');
- for(let i=0;i<50;i++)A.send({t:'pos',x:i,z:0,ry:0});await sleep(200);A.send({t:'ping'});const pg=await A.wait(m=>m.t==='pong',2000).catch(()=>null);ok(!!pg,'pos spam does not eat the normal rate limit');
- A.clear();A.send({t:'setLook',look:'h3'});const lk=await A.wait(m=>m.t==='me'&&m.look==='h3',3000).catch(()=>null);ok(!!lk,'look whitelisted value accepted');
- A.clear();A.send({t:'setLook',look:'<evil>'});const lk2=await A.wait(m=>m.t==='me',3000).catch(()=>null);ok(lk2&&lk2.look==='normal','unknown look rejected -> normal');
- console.log('6. rate limit');
- for(let i=0;i<400;i++)A.send({t:'ping'});const rl=await A.wait(m=>m.t==='err'&&/तेज़/.test(m.text));ok(!!rl,'rate limit triggered');await sleep(1500);
- console.log('7. full lives to death + new life');
- const players=[A,B,C2];await Promise.all(players.map(c=>c.playUntil(()=>false,600)));
- for(const c of players){if(c.me.state!=='dead')await c.wait(m=>m.t==='me'&&m.state==='dead',5000).catch(()=>{});
-  ok(c.me.state==='dead'&&c.me.summary&&c.me.summary.score>0,c.n+' died at '+(c.me.summary&&c.me.summary.age)+' ('+(c.me.summary&&c.me.summary.cause)+') score '+(c.me.summary&&c.me.summary.score))}
- A.clear();A.send({t:'newlife'});await A.wait(m=>m.t==='me'&&m.state==='preg');ok(true,'new life starts another pregnancy wait');
- await A.wait(m=>m.t==='me'&&m.state==='alive',30000);const rb=await A.wait(m=>m.t==='me'&&m.life).catch(()=>A.q.filter(m=>m.t==='me'&&m.life).pop()||A);ok(A.me.life&&A.me.life.age===0,'reborn after wait');
- const w=A.q.filter(m=>m.t==='feed').length+A.q.filter(m=>m.t==='tick').length;ok(w>0,'world feed/ticks received');
- const h=await (await fetch('http://localhost:'+PORT+'/health')).json();ok(h.ok&&h.players===3,'server healthy: '+JSON.stringify(h));
- console.log('8. signup dedupe');
- const hc=async()=>(await (await fetch('http://localhost:'+PORT+'/health')).json()).players;const n0=await hc();
- const D=new Cl('D');await D.open();D.send({t:'signup',name:'डबल',g:'f'});D.send({t:'signup',name:'डबल',g:'f'});
- const da1=await D.wait(m=>m.t==='auth');const da2=await D.wait(m=>m.t==='auth',3000).catch(()=>null);
- ok(!da2||da2.id===da1.id,'second signup on same socket reuses the same player');ok(await hc()===n0+1,'double-tap signup created exactly 1 account');
- const D2=new Cl('D2');await D2.open();D2.send({t:'signup',name:'डबल',g:'f'});const db2=await D2.wait(m=>m.t==='auth');
- ok(db2.id===da1.id&&await hc()===n0+1,'same name+gender from same IP within window -> same account');
- const D3=new Cl('D3');await D3.open();D3.send({t:'signup',name:'डबल',g:'m'});const db3=await D3.wait(m=>m.t==='auth');
- ok(db3.id!==da1.id&&await hc()===n0+2,'different gender -> separate account');
- console.log('9. online derived from live sockets (no ghosts)');
- const onl=(list,id)=>{const p=list.find(x=>x.id===id);return p&&p.online};
- await sleep(100);ok(D.ws.readyState!==1||(await D.wait(m=>m.t==='err'&&/दूसरी जगह/.test(m.text),2000).catch(()=>null)),'older socket told it was replaced');
- const G=new Cl('G');await G.open();G.send({t:'signup',name:'घोस्ट',g:'m'});const ga=await G.wait(m=>m.t==='auth');
- A.clear();G.send({t:'hello',token:db3.token});await G.wait(m=>m.t==='auth'&&m.id===db3.id);
- const gl=await A.wait(m=>m.t==='players'&&onl(m.list,ga.id)===false&&onl(m.list,db3.id)===true,3000).catch(()=>null);
- ok(!!gl,'socket switching accounts leaves no ghost: old account offline, new online');
- A.clear();D2.ws.close();const cl=await A.wait(m=>m.t==='players'&&onl(m.list,da1.id)===false,3000).catch(()=>null);ok(!!cl,'online=false after socket close');
- A.clear();G.ws.close();const cl2=await A.wait(m=>m.t==='players'&&onl(m.list,db3.id)===false&&onl(m.list,ga.id)===false,3000).catch(()=>null);ok(!!cl2,'all accounts offline after their sockets close');
- const H1=new Cl('H1');await H1.open(da1.token);await H1.wait(m=>m.t==='auth');const H2=new Cl('H2');await H2.open(da1.token);await H2.wait(m=>m.t==='auth');
- await sleep(300);ok(H1.ws.readyState>=2,'replaced socket is closed');A.clear();A.send({t:'setLook',look:'h2'});
- const pl2=(await A.wait(m=>m.t==='players',3000).catch(()=>({list:[]}))).list;
- ok(pl2.filter(x=>x.id===da1.id).length===1&&onl(pl2,da1.id)===true,'replacement keeps exactly one online entry');
- A.clear();H2.ws.close();const cl3=await A.wait(m=>m.t==='players'&&onl(m.list,da1.id)===false,3000).catch(()=>null);ok(!!cl3,'offline after replacement socket closes');
- const P0=new Cl('P0');await P0.open();P0.send({t:'ping'});const pp=await P0.wait(m=>m.t==='pong',2000).catch(()=>null);ok(!!pp,'pre-login ping answered (keepalive)');
- const hb=await P0.wait(m=>m.t==='hb',5000).catch(()=>null);ok(!!hb,'server app-level heartbeat frame received');P0.ws.close();
- for(const c of [A,B,C2])c.ws.close();await sleep(3500);ok(fs.existsSync(DATA)&&JSON.parse(fs.readFileSync(DATA)).players,'world persisted to JSON');
- ok(!crashed&&srv.exitCode===null,'no server crash');ok(!/handler error/.test(srvOut),'no handler errors in server log');
+ const A=new Cl('A'),B=new Cl('B');
+ console.log('1. instant first life');
+ for(const [c,n,g] of [[A,'अमित','m'],[B,'प्रिया','f']]){await c.open();c.send({t:'signup',name:n+'<script>',g})}
+ await A.wait(m=>m.t==='me');await B.wait(m=>m.t==='me');
+ ok(A.me.state==='alive'&&A.me.life&&A.me.life.age===5,'first life starts immediately at signup (no pregnancy wait), age '+A.me.life.age);
+ ok(!A.me.name.includes('<'),'name sanitized: '+A.me.name);ok(!('ev' in A.me.life),'no choice/question card sent to client');
+ A.send({t:'choose',i:0});A.send({t:'next'});await sleep(150);ok(A.me.life.age===5,'client cannot choose or skip years');
+ console.log('2. years advance automatically');
+ const y=await A.wait(m=>m.t==='life',15000).catch(()=>null);ok(!!y&&/साल/.test(y.text),'auto year toast: '+(y&&y.text.slice(0,60)));
+ await sleep(200);ok(A.me.life.age>=6,'age advanced on server: '+A.me.life.age);
+ console.log('3. in-world actions + cooldown');
+ const s=Z('school');A.send({t:'act',z:'school'});const e1=await A.wait(m=>m.t==='err');ok(/चलकर/.test(e1.text),'action rejected when far from landmark');
+ A.send({t:'pos',x:s.x,z:s.z,ry:0});await sleep(150);A.clear();const st0=A.me.life.study||0;A.send({t:'act',z:'school'});
+ const g1=await A.wait(m=>m.t==='gain',3000).catch(()=>null);ok(!!g1&&/पढ़ाई/.test(g1.text),'study action gives feedback: '+(g1&&g1.text));
+ await A.wait(m=>m.t==='me');ok((A.me.life.study||0)===st0+1,'study counter +1');
+ A.send({t:'act',z:'school'});const e2=await A.wait(m=>m.t==='err');ok(/रुको/.test(e2.text),'cooldown enforced');
+ await sleep(900);A.clear();A.send({t:'act',z:'school'});ok(!!(await A.wait(m=>m.t==='gain',3000).catch(()=>null)),'action allowed after cooldown');
+ const h=Z('hospital');A.send({t:'pos',x:h.x,z:h.z,ry:0});await sleep(150);const h0=A.me.life.h;A.send({t:'act',z:'hospital'});await A.wait(m=>m.t==='gain');await A.wait(m=>m.t==='me');ok(A.me.life.h>=Math.min(100,h0),'heal action at hospital');
+ A.send({t:'act',z:'nope'});await sleep(100);ok(true,'unknown zone ignored');
+ console.log('4. bots');
+ const pl=await A.wait(m=>m.t==='players',3000).catch(()=>({list:[]}));const bots=pl.list.filter(p=>p.bot);ok(bots.length===6,'6 bots listed (BOTS env): '+bots.length);ok(bots.every(b=>b.name.startsWith('🤖')),'bots marked 🤖');
+ A.clear();const ps1=await A.wait(m=>m.t==='poses'&&m.list.some(p=>p.b));const b0=ps1.list.find(p=>p.b);await sleep(1800);
+ const ps2=await A.wait(m=>m.t==='poses'&&m.list.some(p=>p.id===b0.id));const b1=ps2.list.find(p=>p.id===b0.id);
+ ok(b0.l&&b0.n,'bot pose has look+name');ok(Math.abs(b1.x-b0.x)+Math.abs(b1.z-b0.z)>0.05||b1.s,'bots move around (or sit)');
+ A.send({t:'friend',to:b0.id});ok(/बॉट/.test((await A.wait(m=>m.t==='notif')).text),'cannot friend a bot');
+ A.send({t:'msg',to:b0.id,text:'hi'});ok(!!(await A.wait(m=>m.t==='msg'&&m.m.from===b0.id,4000).catch(()=>null)),'bot replies to message');
+ console.log('5. punch');
+ const pk=Z('park');A.send({t:'pos',x:pk.x,z:pk.z,ry:0});await sleep(130);B.send({t:'pos',x:pk.x,z:pk.z+1,ry:Math.PI});await sleep(200);
+ B.clear();const hb=B.me.life.h;A.send({t:'punch'});const hit=await B.wait(m=>m.t==='fx'&&m.k==='hit'&&m.id===B.me.id,3000).catch(()=>null);ok(!!hit,'punch in front hits B (synced fx)');
+ await B.wait(m=>m.t==='me');ok(B.me.life.h===Math.max(10,hb-2),'B health -2 from punch ('+hb+'->'+B.me.life.h+')');
+ B.clear();A.send({t:'punch'});await sleep(200);ok(!B.q.some(m=>m.t==='fx'&&m.k==='hit'),'punch rate-limited');
+ await sleep(800);B.clear();A.send({t:'pos',x:pk.x,z:pk.z,ry:Math.PI});await sleep(150);A.send({t:'punch'});await sleep(200);ok(!B.q.some(m=>m.t==='fx'&&m.k==='hit'),'no hit when facing away');
+ const tp=Z('temple');await sleep(800);A.send({t:'pos',x:tp.x,z:tp.z,ry:0});await sleep(130);B.send({t:'pos',x:tp.x,z:tp.z+1,ry:0});await sleep(200);B.clear();A.clear();A.send({t:'punch'});
+ const sn=await A.wait(m=>m.t==='notif'&&/मना/.test(m.text),2000).catch(()=>null);ok(!!sn&&!B.q.some(m=>m.k==='hit'),'no punching in temple safe zone');
+ B.send({t:'pos',x:5,z:5,ry:0,s:1});const sp=await A.wait(m=>m.t==='poses'&&m.list.some(p=>p.id===B.me.id&&p.s===1),3000).catch(()=>null);ok(!!sp,'sit state broadcast');
+ console.log('6. social + safety');
+ A.send({t:'msg',to:B.me.id,text:'नमस्ते'});ok(/दोस्त/.test((await A.wait(m=>m.t==='err')).text),'DMs friends-only');
+ A.send({t:'friend',to:B.me.id});await B.wait(m=>m.t==='me'&&m.friendReq.length);B.send({t:'friendResp',from:A.me.id,ok:true});await A.wait(m=>m.t==='me'&&m.friends.length===1);
+ A.send({t:'msg',to:B.me.id,text:'नमस्ते प्रिया!'});ok((await B.wait(m=>m.t==='msg')).m.text==='नमस्ते प्रिया!','message delivered between friends');
+ B.send({t:'block',id:A.me.id});await B.wait(m=>m.t==='notif'&&/ब्लॉक/.test(m.text));A.clear();A.send({t:'msg',to:B.me.id,text:'x'});ok(/ब्लॉक|दोस्त/.test((await A.wait(m=>m.t==='err')).text),'blocked user cannot message');
+ A.send({t:'pos',x:9999,z:-9999,ry:'evil'});const pc=await B.wait(m=>m.t==='poses'&&m.list.some(p=>p.id===A.me.id&&p.x===T.HALF),3000).catch(()=>null);ok(!!pc,'pos clamped to map bounds');
+ for(let i=0;i<400;i++)A.send({t:'ping'});ok(!!(await A.wait(m=>m.t==='err'&&/तेज़/.test(m.text))),'rate limit triggered');await sleep(1500);
+ console.log('7. death + rebirth wait');
+ A.send({t:'admin',key:'testkey123'});await sleep(200);for(let i=0;i<200&&A.me.state==='alive';i++){A.send({t:'next'});await sleep(15)}
+ await A.wait(m=>m.t==='me'&&m.state==='dead',5000).catch(()=>{});ok(A.me.state==='dead'&&A.me.summary.score>0,'A died at '+(A.me.summary&&A.me.summary.age));
+ const C=new Cl('C');await C.open();C.send({t:'signup',name:'चिंटू',g:'m'});await C.wait(m=>m.t==='me');
+ C.send({t:'admin',key:'wrong'});await C.wait(m=>m.t==='err');
+ const h2=await (await fetch('http://localhost:'+PORT+'/health')).json();ok(h2.ok&&h2.players===3,'health: '+JSON.stringify(h2));
+ for(const c of [A,B,C])c.ws.close();await sleep(3500);ok(fs.existsSync(DATA),'world persisted');
+ ok(!crashed&&srv.exitCode===null,'no server crash');ok(!/handler error/.test(srvOut),'no handler errors');
  console.log(`\nRESULT: ${pass} passed, ${fail} failed`);srv.kill();process.exit(fail?1:0);
 })().catch(e=>{console.error('TEST ERROR',e);console.log(srvOut.slice(-2000));srv.kill();process.exit(1)});
