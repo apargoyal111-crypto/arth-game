@@ -173,6 +173,9 @@ function on(m){
  else if(m.t==='dlg'){if(window.onDlg)window.onDlg(m)}
  else if(m.t==='wanted'){if(window.onWanted)window.onWanted(m)}
  else if(m.t==='xp'){if(window.ME){ME.xp=m.xp;ME.lvl=m.lvl}if(window.toast&&m.n)toast('✨ +'+m.n+' XP')}
+ else if(m.t==='cmdok'){if(window.onCmdOk)window.onCmdOk(m)}
+ else if(m.t==='gf'){if(window.onGf)window.onGf(m)}
+ else if(m.t==='owner'){if(window.onOwner)window.onOwner(m)}
  else if(m.t==='ko'){if(window.onKo)window.onKo(m)}
  else if(m.t==='jail'){if(window.onJail)window.onJail(m)}
  else if(m.t==='gig'){if(window.onGig)window.onGig(m)}
@@ -196,7 +199,7 @@ function bar(l,v,c){return '<div class="st">'+l+' <b>'+v+'</b><div class="bar"><
 function renderStats(){var st=$('stats');if(!ME){st.style.display='none';return}st.style.display='block';
  var top='<div class="srow"><span>'+esc(ME.name)+'</span><span class="pill g">🟢 '+(W.active||0)+'</span></div>';
  var L=ME.life;if(!L){st.innerHTML=top+'<div>'+(ME.state==='preg'?'🤰 नया जन्म आने वाला है':'🕯️ जीवन समाप्त')+'</div>';return}
- st.innerHTML=top+'<div class="srow"><span>⭐ लेवल '+(ME.lvl||1)+' · '+(ME.xp||0)+' XP</span><span'+(L.money<0?' style="color:#ff8a8a"':'')+'>💰 ₹'+fmt(L.money)+'</span></div>'+bar('❤️ सेहत',L.h,L.h<30?'#e74c3c':'#2ecc71')+bar('😊 खुशी',L.j,'#5b9cff')+bar('🤝 रिश्ते',L.r,'#c86bfa')+'<div class="st">📚 पढ़ाई <b>'+(L.study||0)+'</b></div>'}
+ st.innerHTML=top+'<div class="srow"><span>⭐ लेवल '+(ME.lvl||1)+' · '+(ME.xp||0)+' XP</span><span'+(L.money<0?' style="color:#ff8a8a"':'')+'>💰 ₹'+fmt(L.money)+'</span></div>'+bar('❤️ सेहत',L.h,L.h<30?'#e74c3c':'#2ecc71')+bar('😊 खुशी',L.j,'#5b9cff')+bar('🤝 रिश्ते',L.r,'#c86bfa')+'<div class="st">📚 पढ़ाई <b>'+(L.study||0)+'</b></div>';if(window.GF&&GF.list){var sel='<div class="srow"><span>❤️ गर्लफ्रेंड</span><select id="gfsel">'+GF.list.map(function(x){return '<option value="'+x.id+'"'+(x.id===GF.id?' selected':'')+'>'+esc(x.name)+'</option>'}).join('')+'</select></div>';st.insertAdjacentHTML('beforeend',sel);$('gfsel').onchange=function(){S({t:'gfset',id:this.value})}}}
 function fxHtml(d){if(!d)return '';var a=[];if(d[0])a.push('<span class="'+(d[0]>0?'p':'n')+'">'+(d[0]>0?'+':'-')+'₹'+fmt(Math.abs(d[0]))+'</span>');var n=['','सेहत','खुशी','रिश्ते'];for(var i=1;i<4;i++)if(d[i])a.push('<span class="'+(d[i]>0?'p':'n')+'">'+(d[i]>0?'+':'')+d[i]+' '+n[i]+'</span>');return a.length?'<div class="fx">'+a.join('')+'</div>':''}
 function render(){if(!ME)return;viewP=false;renderStats();clearInterval(waitT);
  document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',DRAWER&&b.dataset.tab===tab)});

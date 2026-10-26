@@ -29,7 +29,7 @@ function persist(){if(!dirty)return;dirty=false;fs.mkdirSync(path.dirname(DATA),
 setInterval(()=>{try{persist()}catch(e){console.error('persist',e)}},3000).unref();
 
 // ---------- helpers ----------
-const LOOKS=['normal','kurta','shirt','salwar','saree','apara','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10'];const look=v=>{v=v==='hero'?'apara':v==='heroine'?'h1':v;return LOOKS.includes(v)?v:'normal'}; // original fictional looks only
+const LOOKS=['normal','kurta','shirt','salwar','saree','apara','h1','h2','h3','h4','h5','h6','h7','h8','h9','h10','gf','cmdo'];const look=v=>{v=v==='hero'?'apara':v==='heroine'?'h1':v;return LOOKS.includes(v)?v:'normal'}; // original fictional looks only
 const clean=(s,n)=>String(s==null?'':s).replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,n);
 const uid=()=>crypto.randomBytes(6).toString('hex');
 const now=()=>Date.now();
@@ -114,6 +114,9 @@ function socialBonus(p){const L=p.life;if(!L)return;const on=p.friends.filter(is
 // ---------- action handlers (all validated server-side) ----------
 const H={
  next(p){},
+ ocmd(p,m){ownerCmd(p,String(m.text||'').slice(0,80))},
+ gfcall(p){if(!p.admin)return err(p,'👑 सिर्फ मालिक');gfDefault(p);const b=ROLEB.find(x=>x.id===p.gf);if(b)execCmd(p,b,{act:'come'},'आ रही हूँ '+p.name+'! ❤️')},
+ gfset(p,m){if(!p.admin)return;const b=ROLEB.find(x=>x.id===m.id&&x.g==='f');if(b){p.gf=b.id;mark();sendTo(p.id,{t:'gf',id:b.id,name:b.name})}},
  players(p){send(socks.get(p.id),{t:'players',list:playersList()})},
  say(p,m){say(p,m).then(r=>{if(r&&p.admin)send(socks.get(p.id),{t:'llmsrc',src:r.src,act:r.act})}).catch(e=>console.error('say',e.message))},
  lines(p){if(!p.admin)return;const f=[];for(const d of NPCDEF){if(d[2]!=='f')continue;const R=ROLES[d[0]];f.push(...(R.hi||[]),...(R.call||[]))}send(socks.get(p.id),{t:'lines',f})},
@@ -240,7 +243,7 @@ let botLast=now();setInterval(()=>{const t=now();botTick(Math.min(1,(t-botLast)/
 setInterval(()=>{if(BOTS.length&&socks.size&&Math.random()<.5){const b=pickL(BOTS.filter(x=>!x.role));botSay(b,pickL(BOT_IDLE))}},9000).unref();
 // ---------- role NPCs (shopkeeper, chaiwala, vendor, teacher, doctor, pujari, cricketers, elders) + police ----------
 const NPC_PHASE=env.NPC_PHASE!=null?Number(env.NPC_PHASE):null;
-function dayPhase(){if(NPC_PHASE!=null)return NPC_PHASE;const w=db.world;return((w.day%10)+Math.min(1,(now()-w.lastDay)/WORLD_DAY_MS))/10}
+function dayPhase(){if(NPC_PHASE!=null)return NPC_PHASE;if(typeof OWN!=='undefined'&&OWN.phase!=null)return OWN.phase;const w=db.world;return((w.day%10)+Math.min(1,(now()-w.lastDay)/WORLD_DAY_MS))/10}
 const ZP=id=>{const z=T.ZONES.find(q=>q.id===id);return [z.x,z.z]};
 const MK=ZP('market'),SC=ZP('school'),HO=ZP('hospital'),TE=ZP('temple'),PA=ZP('park'),ST=ZP('stadium'),HM=ZP('home'),THANA=[-30,-30];
 const JAIL={x0:-33,x1:-27,z0:-50,z1:-44},JAIL_C=[-30,-47],JAIL_OUT=[-30,-12];
@@ -252,6 +255,7 @@ const ROLES={
  teacher:{e:'📚',t:'मास्टरजी',look:'saree',items:[['padho','📖 कुछ सिखाइए',0,{study:1}]],hi:['पढ़ाई कैसी चल रही है?','होमवर्क किया?'],call:['चलो बच्चों, क्लास का टाइम!']},
  doctor:{e:'🩺',t:'डॉक्टर साहब',look:'doctor',items:[['checkup','🩺 चेकअप ₹200',200,{h:5}]],hi:['कैसी तबीयत है?','पानी ज़्यादा पिया करो'],call:['अगला मरीज़!']},
  pujari:{e:'🛕',t:'पुजारी जी',look:'pujari',items:[['prasad','🙏 प्रसाद लीजिए',0,{j:3}]],hi:['जय श्री राम 🙏','आओ बेटा, आशीर्वाद लो'],call:['🔔 आरती का समय हो गया','ॐ नमः शिवाय 🙏']},
+ friend:{e:'💖',t:'',look:'gf',items:[],hi:['अरे, तुम आ गए! आज कहाँ घूमने चलें?','पार्क की हवा आज बहुत अच्छी है 🙂','चाय पीने चलें? मुझे बाज़ार वाली चाय पसंद है।','शाम को मंदिर की आरती देखने चलोगे?'],call:['चलो ना, घूमने चलते हैं! 😄','आज मौसम कितना प्यारा है!']},
  cricket:{e:'🏏',t:'',look:'shirt',items:[['cricket','🏏 क्रिकेट खेलें!',0,{h:2,j:3}]],hi:['आओ, एक ओवर खेलोगे?','आउट! हाहा 😂'],call:['चौका! 🏏','हाउज़ैट!! ☝️']},
  elder:{e:'👴',t:'दादाजी',look:'kurta',items:[['salah','💭 कोई सलाह दीजिए',0,{j:1,r:1}]],hi:['जीते रहो बेटा','हमारे ज़माने में…'],call:['सुबह की सैर सबसे अच्छी 🚶']},
  police:{e:'👮',t:'हवलदार',look:'police',police:1,hi:['जय हिंद! कोई दिक्कत?','शहर में सब ठीक है?'],call:['सावधान रहें, सुरक्षित रहें']},
@@ -267,6 +271,7 @@ const NPCDEF=[
  ['doctor','डॉ. वर्मा','m',48,[[0,1,[HO[0]-2,HO[1]-18],'post']]],
  ['pujari','पंडित जी','m',62,[[0,1,[TE[0]+1,TE[1]-15.5],'post']]],
  ['cricket','रोहित','m',22,[[.35,.75,[ST[0]-3,ST[1]-24],'cricket']]],['cricket','स्नेहा','f',21,[[.35,.75,[ST[0]+3,ST[1]-22],'cricket']]],['cricket','करण','m',24,[[.35,.75,[ST[0],ST[1]-30],'cricket']]],
+ ['friend','ज़ोया','f',23,[[0,1,[PA[0]+4,PA[1]+2],'wander']]],
  ['elder','दादाजी','m',72,[[.2,.35,[PA[0]-10,PA[1]-4],'walk'],[.35,.7,[18,22],'bench'],[.7,.85,[TE[0]-4,TE[1]-6],'post']]],['elder','दादीजी','f',68,[[.2,.35,[PA[0]+10,PA[1]-4],'walk'],[.35,.7,[42,22],'bench']]],
  ['police','हवलदार सिंह','m',40,[[0,1,[THANA[0]+3,THANA[1]+22],'post']]],['police','सिपाही यादव','m',31,[[0,.5,[MK[0]-4,MK[1]+16.5],'post'],[.5,1,[-60+6.5,-30],'post']]],
  ['traffic','ट्रैफ़िक हवलदार','m',36,[[.25,.88,[4.5,4.5],'post']]]];
@@ -278,7 +283,7 @@ const ROLEB=BOTS.filter(b=>b.role),POLICE=ROLEB.filter(b=>ROLES[b.role].police);
 function goTo(b,x,z){if(Math.hypot(b.x-x,b.z-z)<14){b.route=[[x,z]];b.sit=false;b.ch=true;return}const path=bfs(nearestNode(b.x,b.z),nearestNode(x,z)).map(n=>T.NODES[n]);b.route=path.concat([[x,z]]);b.sit=false;b.ch=true}
 function nearPlayer(x,z,r){for(const o of POS.values())if(Math.hypot(o.x-x,o.z-z)<r)return o;return null}
 function roleTick(dt){const ph=dayPhase(),t=now();
- for(const b of ROLEB){if(b.chase)continue;
+ for(const b of ROLEB){if(b.mode){cmdTick(b,dt,t);continue}if(b.chase)continue;
   let si=b.sched.findIndex(s=>ph>=s[0]&&ph<s[1]);if(si!==b.slot){b.slot=si;b.hid=false;const s=b.sched[si];if(s)goTo(b,s[2][0],s[2][1]);else goTo(b,b.home[0],b.home[1])}
   if(b.wait>0){b.wait-=dt;if(b.wait<=0&&b.sit){b.sit=false;b.ch=true}continue}
   if(b.route.length){const tg=b.route[0],dx=tg[0]-b.x,dz=tg[1]-b.z,d=Math.hypot(dx,dz);if(d<.15){b.route.shift();if(!b.route.length&&si<0){b.hid=true;b.ch=true}continue}
@@ -307,7 +312,7 @@ function knock(p,kind,cop){const L=p.life;if(!L)return;const st=Math.max(1,p.wan
 function copHurt(p,c,dmg,k){const L=p.life;if(!L||p.state!=='alive')return;L.h=Math.max(0,L.h-dmg);p.hurtAt=now();const o=POS.get(p.id),dx=o?o.x-c.x:0,dz=o?o.z-c.z:0,dd=Math.hypot(dx,dz)||1;bcast({t:'fx',k,id:c.id,to:p.id});bcast({t:'fx',k:'hit',id:p.id,dx:dx/dd*.5,dz:dz/dd*.5});
  sendTo(p.id,{t:'gain',text:'-'+dmg+' सेहत '+(k==='shot'?'🔫':'🥊')});if(L.h<=0)knock(p,'wasted',c);else pushMe(p)}
 function inSafe(o){return SAFE.some(z=>Math.hypot(o.x-z.bx,o.z-z.bz)<16)}
-function policeTick(dt,t){
+function policeTick(dt,t){if(!OWN.police)return;
  for(const [id,o] of POS){const p=db.players[id];if(!p)continue;
   
   if(p.wanted>0&&t-(p.crimeAt||0)>CRIME_COOL&&t-(p.decayAt||0)>DECAY_MS&&!POLICE.some(c=>c.chase===id)){p.decayAt=t;setWanted(p,p.wanted-1);if(!p.wanted)sendTo(id,{t:'notif',text:'😮‍💨 पुलिस ने तलाश छोड़ दी'})}}
@@ -323,14 +328,67 @@ function patrolTick(dt,t){const v=PCAR;if(!v)return;let tx,tz,sp=8;const tgt=v.c
   const w=PATROL[v.wp];tx=w[0];tz=w[1];if(Math.hypot(tx-v.x,tz-v.z)<1){v.wp=(v.wp+1)%4;return}}
  const dx=tx-v.x,dz=tz-v.z,d=Math.hypot(dx,dz)||1,st=Math.min(d,sp*dt);v.x+=dx/d*st;v.z+=dz/d*st;v.ry=Math.atan2(dx,dz);v.ch=true}
 
+
+// ---------- NPC commands (whitelist, server-validated) + owner world commands ----------
+const CMD_IDLE=Number(env.CMD_IDLE_MS)||600000,MAXF=3,OWN={phase:null,weather:'saaf',police:true};
+const OKL={follow:['ठीक है, चलो!','हाँ, साथ चलती/चलता हूँ!'],come:['आई/आया!','बस आ रहे हैं!'],wait:['ठीक है, यहीं रुकते हैं।'],goto:['ठीक है, वहाँ चलते हैं!'],sit:['ठीक है, बैठ जाते हैं।'],stand:['लो, खड़े हो गए!'],dance:['चलो नाचते हैं! 💃'],wave:['👋 नमस्ते!'],clap:['👏 वाह वाह!'],selfie:['📸 स्माइल! बढ़िया सेल्फी!'],walkwith:['चलो साथ चलते हैं!'],ride:['ठीक है, गाड़ी में चलते हैं! 🚗'],guard:['डरो मत, मैं साथ हूँ! 💪'],stopguard:['ठीक है, लड़ाई बंद।'],unfollow:['ठीक है, फिर मिलेंगे!'],friends:['रुको, दोस्तों को बुलाते हैं!'],home:['ठीक है, घर चलते हैं। 🏠']};
+const isGf=(p,b)=>!!(p&&p.admin&&p.gf===b.id);
+const followers=pid=>ROLEB.filter(x=>x.follow===pid&&x.mode&&x.mode!=='hold'&&!isGf(db.players[pid],x)).length;
+function release(b){b.follow=null;b.mode=null;b.slot=-2;b.route=[];b.sit=false;b.hid=false;b.ch=true}
+function zoneOf(id){return T.ZONES.find(z=>z.id===id)}
+function execCmd(p,b,c,sayText){const t=now(),own=!!p.admin,gf=isGf(p,b),a=POS.get(p.id);if(!a)return;const k=c.act;
+ const no=txt=>{dlg(p,b,txt);return false};
+ if(['follow','walkwith','ride','guard'].includes(k)){if(b.follow&&b.follow!==p.id&&!own)return no('माफ़ करना, मैं अभी किसी और के साथ हूँ 🙂');
+  if(b.role==='police'&&!own&&k!=='follow')return no('मैं ड्यूटी पर हूँ भाई 👮');
+  if(!gf&&b.follow!==p.id&&followers(p.id)>=MAXF)return no('तुम्हारे साथ पहले ही 3 लोग हैं! 😅');
+  b.follow=p.id;b.mode=k;b.to=c.to||null;b.cmdT=t;b.sit=false;b.route=[];b.chase=null}
+ else if(k==='unfollow'||k==='home'){if(gf&&k==='unfollow'){b.mode='hold';b.cmdT=t}else{release(b);if(k==='home')goTo(b,b.home[0],b.home[1])}}
+ else if(k==='stopguard'){if(b.follow===p.id)b.mode='follow'}
+ else if(k==='come'){b.follow=p.id;b.mode=gf?'follow':'hold';b.cmdT=t;b.sit=false;goTo(b,a.x+1,a.z+1)}
+ else if(k==='wait'){b.follow=p.id;b.mode='hold';b.cmdT=t;b.route=[]}
+ else if(k==='goto'){const z=zoneOf(c.to);if(!z)return no('कौन सी जगह? नाम बताओ — जैसे मंदिर, बाज़ार, अस्पताल।');b.follow=p.id;b.mode='hold';b.cmdT=t;goTo(b,z.x+1,z.z+1)}
+ else if(k==='sit'){b.follow=b.follow||p.id;b.mode=b.mode||'hold';b.cmdT=t;b.route=[];b.sit=true;b.ch=true}
+ else if(k==='stand'){b.sit=false;b.ch=true}
+ else if(k==='dance'||k==='wave'||k==='clap'){bcast({t:'fx',k:k==='clap'?'act':k,id:b.id})}
+ else if(k==='selfie'){botFace(b,a);bcast({t:'fx',k:'act',id:b.id});p.npcf=p.npcf||{};p.selT=p.selT||{};if(!p.selT[b.id]||t-p.selT[b.id]>300000){p.selT[b.id]=t;p.npcf[b.id]=Math.min(20,(p.npcf[b.id]||0)+1)}sendTo(p.id,{t:'notif',text:'📸 '+b.name+' के साथ सेल्फी!'})}
+ else if(k==='friends'){const fr=ROLEB.filter(x=>x!==b&&!x.follow&&!x.hid&&x.role!=='police'&&x.role!=='traffic').sort((x,y)=>Math.hypot(x.x-b.x,x.z-b.z)-Math.hypot(y.x-b.x,y.z-b.z)).slice(0,2);let n=0;for(const x of fr){if(!own&&followers(p.id)>=MAXF)break;x.follow=p.id;x.mode='follow';x.cmdT=t;x.route=[];n++}if(!n)return no('अभी कोई दोस्त पास नहीं है 😕')}
+ else if(k==='dir'){onDlg(p,{id:b.id,k:'dir'});return true}
+ else if(k==='buy'){const R=ROLES[b.role],it=(R.items||[]).find(i=>i[0]===c.item)||(R.items||[])[0];if(!it)return no('मेरे पास बेचने को कुछ नहीं है 🙂');onDlg(p,{id:b.id,k:'buy:'+it[0]});return true}
+ else return no(gf?'अरे '+p.name+', ये नहीं 🙈 चलो साथ घूमते हैं?':'हम्म, ये तो मुझसे नहीं होगा 🙂 कुछ और बोलो?');
+ b.ch=true;const ln=(sayText||pickL(OKL[k]||['ठीक है!'])).replace(/(\S+)\/(\S+)/g,(m,f,ml)=>b.g==='f'?f:ml);sendTo(p.id,{t:'cmdok',id:b.id,k,name:b.name,text:ln});botSay(b,ln);dlg(p,b,ln);return true}
+function cmdTick(b,dt,t){const o=POS.get(b.follow),p=db.players[b.follow];const gf=isGf(p,b);
+ if(!o||!p||!isOnline(b.follow)||(!gf&&t-b.cmdT>CMD_IDLE))return release(b);
+ if(b.lpx==null||Math.hypot(o.x-b.lpx,o.z-b.lpz)>1){b.lpx=o.x;b.lpz=o.z;if(b.mode!=='hold')b.cmdT=t}
+ if(b.mode==='hold'){if(b.route.length){const tg=b.route[0],dx=tg[0]-b.x,dz=tg[1]-b.z,d=Math.hypot(dx,dz);if(d<.15){b.route.shift();return}const st=Math.min(d,b.sp*1.5*dt);b.x+=dx/d*st;b.z+=dz/d*st;b.ry=Math.atan2(dx,dz);b.ch=true}return}
+ const v=b.mode==='ride'&&VEHS.find(x=>x.driver===b.follow);if(v){if(!b.hid){b.hid=true;b.ch=true}b.x=v.x;b.z=v.z;return}if(b.hid){b.hid=false;b.x=o.x+1.5;b.z=o.z+1;b.ch=true}
+ const dx=o.x-b.x,dz=o.z-b.z,d=Math.hypot(dx,dz);if(d>60){b.x=o.x+2;b.z=o.z+2;b.ch=true;return}
+ if(d>2.2){const sp=d>7?5.5:2.4,st=Math.min(d-2,sp*dt);b.x+=dx/d*st;b.z+=dz/d*st;b.ry=Math.atan2(dx,dz);b.sit=false;b.ch=true}
+ if(b.mode==='walkwith'&&b.to){const z=zoneOf(b.to);if(z&&Math.hypot(o.x-z.x,o.z-z.z)<8){botSay(b,'लो, पहुँच गए! 🙂');release(b);return}}
+ if(b.mode==='guard')for(const c of POLICE){if(c===b||c.hid||(c.down&&t<c.down))continue;if(c.chase===b.follow&&Math.hypot(c.x-b.x,c.z-b.z)<3&&t-(b.atk||0)>1000){b.atk=t;bcast({t:'fx',k:'punch',id:b.id});const ddx=c.x-b.x,ddz=c.z-b.z,dd=Math.hypot(ddx,ddz)||1;botHit(c,p,ddx/dd,ddz/dd);break}}}
+const PHN={subah:.15,सुबह:.15,dopahar:.35,दोपहर:.35,shaam:.6,शाम:.6,raat:.85,रात:.85};
+function ownerCmd(p,text){if(!p.admin)return err(p,'👑 यह सिर्फ मालिक (owner) के लिए है');const [c,...rest]=text.slice(1).trim().split(/\s+/);const arg=(rest[0]||'').toLowerCase(),a=POS.get(p.id),t=now();
+ const ok=x=>sendTo(p.id,{t:'notif',text:'👑 '+x});
+ if(c==='time'){const h=Number(arg);OWN.phase=arg==='auto'?null:Number.isFinite(h)&&arg!==''?((h%24)+24)%24/24:PHN[arg]!=null?PHN[arg]:OWN.phase;bcast({t:'owner',k:'time',ph:OWN.phase});return ok('समय बदला')}
+ if(c==='weather'){OWN.weather=['saaf','baarish','kohra'].includes(arg)?arg:'saaf';bcast({t:'owner',k:'weather',w:OWN.weather});return ok('मौसम: '+OWN.weather)}
+ if(c==='spawn'&&a){const v=VEHS.filter(v=>!v.driver&&!v.npc&&v.kind!=='police').sort((x,y)=>Math.hypot(x.x-a.x,x.z-a.z)-Math.hypot(y.x-a.x,y.z-a.z))[0];if(!v)return err(p,'कोई गाड़ी खाली नहीं');v.x=a.x+3;v.z=a.z;v.ch=true;pushVehs(true);return ok('गाड़ी पास आ गई 🚗')}
+ if(c==='callall'&&a){let n=0;for(const b of ROLEB){if(b.hid&&!b.sched)continue;b.hid=false;b.follow=p.id;b.mode='hold';b.cmdT=t;b.chase=null;goTo(b,a.x+(Math.random()-.5)*8,a.z+(Math.random()-.5)*8);n++}return ok(n+' NPC बुलाए')}
+ if(c==='home'){for(const b of ROLEB)if(!isGf(p,b)){release(b);goTo(b,b.home[0],b.home[1])}return ok('सब घर भेजे')}
+ if(c==='police'){OWN.police=arg!=='off';if(!OWN.police){for(const q of Object.values(db.players))if(q.wanted){q.wanted=0;sendTo(q.id,{t:'wanted',n:0})}for(const b of POLICE)b.chase=null;if(PCAR)PCAR.chase=null}return ok('पुलिस '+(OWN.police?'चालू':'बंद'))}
+ if(c==='gf'){const b=ROLEB.find(x=>x.g==='f'&&(x.id===arg||(x.base||'')===rest.join(' ')));if(!b)return err(p,'ऐसी NPC नहीं मिली');p.gf=b.id;mark();sendTo(p.id,{t:'gf',id:b.id,name:b.name});return ok('❤️ '+b.name)}
+ return err(p,'कमांड: /time 18|subah|raat|auto · /weather saaf|baarish|kohra · /spawn · /callall · /home · /police on|off')}
+function gfDefault(p){if(!p.admin)return;if(!p.gf||!ROLEB.some(b=>b.id===p.gf)){const b=ROLEB.find(x=>x.role==='friend')||ROLEB.find(x=>x.g==='f'&&x.role!=='police'&&x.role!=='traffic');if(b)p.gf=b.id}}
 // ---------- AI dialogue (LLM with scripted fallback) ----------
-const LLM=require('./llm.js')(env);
-const DEFLECT=['ऐसी बातें नहीं, भाई/बहन 🙏 कुछ और पूछो — चाय पिओगे?','माफ़ करना, इस पर बात नहीं करूँगी/करूँगा। शहर के बारे में पूछो!','अरे, तमीज़ से बात करो 🙂 कोई काम हो तो बताओ।'];
+const LLM=require('./llm.js')(env);LLM.CMDS=require('./llm.js').CMDS;
+const DEFLECT=['ऐसी बातें नहीं, दोस्त 🙏 कुछ और पूछो — चाय पिओगे?','माफ़ करना, इस पर बात नहीं होगी। शहर के बारे में पूछो!','अरे, तमीज़ से बात करो 🙂 कोई काम हो तो बताओ।'];
 const PH=t=>t<.25?'सुबह':t<.5?'दोपहर':t<.75?'शाम':'रात';
 async function say(p,m){if(p.state!=='alive'||!p.life)return;const b=npcOf(p,m.id);if(!b)return err(p,'पास जाकर बात करो');const R=ROLES[b.role];const text=clean(m.text,200);
  p.mem=p.mem||{};const mem=p.mem[b.id]||(p.mem[b.id]=[]);const z=T.ZONES.slice().sort((a,c)=>Math.hypot(a.x-b.x,a.z-b.z)-Math.hypot(c.x-b.x,c.z-b.z))[0];
  const P={name:b.base||b.name,role:b.role+(R.t?' ('+R.t+')':''),where:z?z.n:'शहर',time:PH(dayPhase()),player:p.name,dost:dost(p,b),mem:mem.join(' | '),items:(R.items||[]).map(i=>i[0]+'='+i[1]+' ₹'+i[2]).join(', '),job:!!R.job,mood:R.mood};
- const r=await LLM.reply(p.id,P,text,{line:pickL(R.hi||['हाँ जी, बोलो?']),deflect:pickL(DEFLECT)});
+ if(text&&!LLM.bad(text)){const k=LLM.kw(text,T.ZONES);if(k){execCmd(p,b,k);mem.push(p.name+': '+text.slice(0,60));if(mem.length>4)mem.shift();return {src:'rule',act:k.act}}}
+ if(isGf(p,b)){P.role+=' — '+p.name+' की प्यारी, वफ़ादार गर्लफ्रेंड (काल्पनिक वयस्क); '+p.name+' उसका रचयिता है (पहचान: मैरून हुडी और टैन टैक्टिकल वेस्ट वाला कमांडो लुक); हमेशा प्यार से नाम लेकर बात करती है; सिर्फ साफ़-सुथरा प्यार (हाथ पकड़ना, गले मिलना, गाल पर किस तक), कुछ भी अश्लील नहीं';P.dost=10}
+ P.zones=T.ZONES.map(z=>z.id).join(',');
+ const r=await LLM.reply(p.id,P,text,{line:text?pickL(isGf(p,b)?['हाँ '+p.name+', बोलो ना? ❤️','तुम्हारे साथ हूँ, '+p.name+'!']:['हम्म, अच्छा! और बताओ?','हाँ जी, ज़रूर — कुछ और?','ठीक है, समझ गए 🙂']):pickL(R.hi||['हाँ जी, बोलो?']),deflect:pickL(DEFLECT)});
+ if(LLM.CMDS.includes(r.act)){execCmd(p,b,{act:r.act,to:r.to},r.say);mem.push(r.say.slice(0,60));if(mem.length>4)mem.shift();return r}
  const act=applyAct(p,b,r);mem.push((text?p.name+': '+text.slice(0,60)+' → ':'')+r.say.slice(0,60));if(mem.length>4)mem.shift();
  if(!act)dlg(p,b,r.say);bcast({t:'fx',k:'talk',id:b.id});return r}
 // server-side validation of model-proposed actions: only whitelisted, small effects
@@ -430,10 +488,10 @@ wss.on('connection',(ws,req)=>{
     const old=socks.get(p.id);if(old&&old!==ws){socks.delete(p.id);send(old,{t:'err',text:'दूसरी जगह से लॉगिन हुआ'});try{old.close()}catch(e){}}
     me=p;ws.pid=p.id;socks.set(p.id,ws);
     send(ws,{t:'auth',token:p.token,id:p.id,ice:ICE,cfg:{pregMs:PREG_MS,turnMs:TURN_MS,scale:SCALE}});
-    pushMe(p);if(p.wanted)send(ws,{t:'wanted',n:p.wanted});if(p.gig){const z=T.ZONES.find(q=>q.id===p.gig.to);if(z)send(ws,{t:'gig',to:z.id,n:z.n,pay:p.gig.pay,x:z.x,z:z.z})}send(ws,{t:'world',w:worldView()});pushPlayers();send(ws,{t:'vehs',list:VEHS.map(vehView)});return}
+    pushMe(p);if(p.wanted)send(ws,{t:'wanted',n:p.wanted});if(p.admin){gfDefault(p);const g=ROLEB.find(x=>x.id===p.gf);if(g)send(ws,{t:'gf',id:g.id,name:g.name,list:ROLEB.filter(x=>x.g==='f'&&x.role!=='police').map(x=>({id:x.id,name:x.name}))})}if(p.gig){const z=T.ZONES.find(q=>q.id===p.gig.to);if(z)send(ws,{t:'gig',to:z.id,n:z.n,pay:p.gig.pay,x:z.x,z:z.z})}send(ws,{t:'world',w:worldView()});pushPlayers();send(ws,{t:'vehs',list:VEHS.map(vehView)});return}
    if(m.t==='admin'){const K=String(env.ADMIN_KEY||''),k=String(m.key||'');
     if(!me||!K||k.length!==K.length||!crypto.timingSafeEqual(Buffer.from(k),Buffer.from(K)))return send(ws,{t:'err',text:'गलत एडमिन कुंजी'});
-    me.admin=true;mark();if(me.state==='preg'){startLife(me);pushPlayers()}pushMe(me);return send(ws,{t:'err',text:'👑 स्पेशल एक्सेस चालू!'})}
+    me.admin=true;if(!me.look||me.look==='normal'){me.look='cmdo';pushPlayers()}mark();gfDefault(me);{const g=ROLEB.find(x=>x.id===me.gf);if(g)send(ws,{t:'gf',id:g.id,name:g.name,list:ROLEB.filter(x=>x.g==='f'&&x.role!=='police').map(x=>({id:x.id,name:x.name}))})}if(me.state==='preg'){startLife(me);pushPlayers()}pushMe(me);return send(ws,{t:'err',text:'👑 स्पेशल एक्सेस चालू!'})}
    if(!me){if(m.t==='ping')return send(ws,{t:'pong'});return send(ws,{t:'err',text:'पहले लॉगिन करें'})}
    const h=H[m.t];if(h&&Object.prototype.hasOwnProperty.call(H,m.t))h(me,m);
   }catch(e){console.error('handler error',m&&m.t,e);send(ws,{t:'err',text:'सर्वर त्रुटि'})}

@@ -15,4 +15,6 @@ const resp=o=>async()=>({ok:true,json:async()=>({choices:[{message:{content:type
  ok((await mk({GEMINI_API_KEY:'k'},resp({say:'x'})).reply('s2',P,'tum sexy ho',FB)).say===FB.deflect,'unsafe player input deflected without calling model');
  ok((await mk({GEMINI_API_KEY:'k'},resp('just english text')).reply('s3',P,'hi',FB)).src==='filtered','non-Hindi output falls back');
  L=mk({GEMINI_API_KEY:'k',LLM_BASE_URL:'https://api.groq.com/openai/v1',LLM_MODEL:'llama-3.1-8b-instant'},async(u,o)=>{sent={u,o};return resp({say:'हाँ',act:'none'})()});await L.reply('g',P,'हाँ?',FB);ok(sent.u==='https://api.groq.com/openai/v1/chat/completions'&&JSON.parse(sent.o.body).model==='llama-3.1-8b-instant','LLM_BASE_URL / LLM_MODEL overrides');
+ const Z=require('../public/town.js').ZONES;const K=mk.kw;ok(K('मेरे साथ चलो',Z).act==='follow'&&K('sath lado',Z).act==='guard'&&K('मंदिर जाओ',Z).to==='temple'&&K('नाचो',Z).act==='dance'&&K('घर जाओ',Z).act==='home'&&K('पीछा मत करो',Z).act==='unfollow'&&K('asdf',Z)===null,'fallback Hindi/Hinglish keyword command parser');
+ L=mk({GEMINI_API_KEY:'k'},resp({say:'ठीक है',act:'teleport'}));ok((await L.reply('w',P,'कुछ',FB)).act==='none','non-whitelisted command from model -> none');
  console.log(`\nLLM RESULT: ${pass} passed, ${fail} failed`);process.exit(fail?1:0)})();

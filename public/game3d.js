@@ -324,6 +324,8 @@ const LOOKS={
  salwar:{n:'सलवार-कमीज़',d:'गुलाबी कमीज़, पीली सलवार',model:'f',outfit:['#d6336c','#f9c74f',3]},
  saree:{n:'साड़ी',d:'हरी साड़ी, सुनहरी बूटी',model:'f',outfit:['#1b7a5a','#1b7a5a',3],sheen:'#ffe28a'},
  apara:{n:'अपारा — हीरो',d:'काली लेदर जैकेट, स्टाइलिश लीड हीरो',model:'m',tint:'#1d1b1f',amt:.85,glam:1,skin:[1.02,.98,.95]},
+ cmdo:{n:'कमांडो',d:'मैरून हुडी, टैन टैक्टिकल वेस्ट, कैमो स्कार्फ़, कार्गो पैंट, बूट्स',model:'m',outfit:['#6e1a22','#34363a',0],hairC:'#2e1f16',acc:'cmd'},
+ gf:{n:'ज़ोया — रेड चेक',d:'लाल-काली चेक शर्ट, कार्गो जींस, ऊँची पोनीटेल, बैकपैक',model:'f',outfit:['#9a1622','#6d8db3',2],hairC:'#3a2416',acc:'gf'},
  h1:{n:'रिया',d:'लाल-सुनहरी डिज़ाइनर साड़ी',model:'f',tint:'#b3122e',amt:.9,glam:1,sheen:'#ffcf6b',pat:3},
  h2:{n:'काव्या',d:'गुलाबी ब्राइडल लहंगा',model:'f',tint:'#e0457b',amt:.9,glam:1,sheen:'#ffd9a0',pat:3},
  h3:{n:'तारा',d:'मिडनाइट-ब्लू गाउन',model:'f',tint:'#1b2a6b',amt:.9,glam:1,sheen:'#9fb6ff'},
@@ -393,10 +395,10 @@ function makeChar(g,name,look,seed,age,bot){age=25;const root=new THREE.Group();
 const BN=['upperarm_r','lowerarm_r','upperarm_l','lowerarm_l','thigh_l','thigh_r','calf_l','calf_r','spine_02','pelvis','head'];
 function upgrade(root){const u=root.userData;const L=Object.assign({id:u.look},LOOKS[u.look]);const key=L.model||(u.g==='f'?'f':'m');const t=TPL[key];if(!t)return;
  const obj=SkeletonUtils.clone(t.scene);obj.scale.setScalar(t.s);obj.position.y=t.y;
- const hs=hash(u.seed),tone=.62+hash(u.seed+'s')*.4;const skin=(L.skin||[1,1,1]).map((v,i)=>v*tone*[1.0,.9,.8][i]);const hair=HAIRC[Math.floor(hash(u.seed+'h')*HAIRC.length)];
+ const hs=hash(u.seed),tone=.62+hash(u.seed+'s')*.4;const skin=(L.skin||[1,1,1]).map((v,i)=>v*tone*[1.0,.9,.8][i]);const hair=L.hairC||HAIRC[Math.floor(hash(u.seed+'h')*HAIRC.length)];
  const rm=[];obj.traverse(o=>{if(o.isMesh){if(DROP.test(o.material.name||'')){rm.push(o);return}o.material=matFor(key,o.material,L,skin,!WEAK,u.seed,hair,u.age>58);o.frustumCulled=false;o.castShadow=shadowsOn}});for(const o of rm)o.parent.remove(o);
  const bones={};obj.traverse(o=>{if(o.isBone&&BN.includes(o.name))bones[o.name]=o});
- const mixer=new THREE.AnimationMixer(obj);const act={};if(t.C){for(const n in t.C){const a=mixer.clipAction(t.C[n]);act[n]=a;if(ONE.has(n)){a.setLoop(THREE.LoopOnce);a.clampWhenFinished=true}}const ik=u.idleK&&act[u.idleK]?u.idleK:'idle';act[ik].play();act[ik].time=hs*act[ik].getClip().duration;root.add(obj);Object.assign(u,{mixer,act,C:1,base:ik,model:obj,bones,baseY:t.y,neck:obj.getObjectByName('neck_01')});return}
+ const mixer=new THREE.AnimationMixer(obj);const act={};if(t.C){for(const n in t.C){const a=mixer.clipAction(t.C[n]);act[n]=a;if(ONE.has(n)){a.setLoop(THREE.LoopOnce);a.clampWhenFinished=true}}const ik=u.idleK&&act[u.idleK]?u.idleK:'idle';act[ik].play();act[ik].time=hs*act[ik].getClip().duration;root.add(obj);if(L.acc==='gf')gfAcc(root,obj);else if(L.acc==='cmd')cmdAcc(root,obj);Object.assign(u,{mixer,act,C:1,base:ik,model:obj,bones,baseY:t.y,neck:obj.getObjectByName('neck_01')});return}
  for(const n of ['idle','walk','run']){const a=mixer.clipAction(t.clips[n]);a.play();a.setEffectiveWeight(n==='idle'?1:0);a.time=hs*a.getClip().duration;act[n]=a}
  root.add(obj);Object.assign(u,{mixer,act,w:{idle:1,walk:0,run:0},model:obj,bones,baseY:t.y})}
 // procedural overlays (punch, sit, wave, stagger, action) applied after the mixer, in character space so they work on any rig orientation
@@ -424,6 +426,31 @@ function animate(ch,speed,dt,now,detail){const u=ch.userData;u.sitW+=((u.sit?1:0
  u.acc+=dt;const every=dist>40?0.1:dist>20?0.033:0;if(u.acc>=every){u.mixer.update(u.acc);u.acc=0}
  overlays(ch,now)}
 
+
+// procedural accessories for the 'gf' look (ponytail, backpack, belt, thigh strap, pendant, wristbands)
+function gfAcc(root,obj){const V=THREE.Vector3;root.updateMatrixWorld(true);const blk=new THREE.MeshStandardMaterial({color:'#151515',roughness:.6}),hairM=new THREE.MeshStandardMaterial({color:'#3a2416',roughness:.5}),wht=new THREE.MeshStandardMaterial({color:'#ece6da',roughness:.8});
+ const at=(bn,geo,mat,off,rx,dirTo)=>{const b=obj.getObjectByName(bn);if(!b)return;const p=b.getWorldPosition(new V());root.worldToLocal(p);const m=new THREE.Mesh(geo,mat);m.position.copy(p).add(off);if(rx)m.rotation.x=rx;
+  if(dirTo){const c=obj.getObjectByName(dirTo);if(c){const q=c.getWorldPosition(new V());root.worldToLocal(q);m.quaternion.setFromUnitVectors(new V(0,1,0),p.clone().sub(q).normalize())}}m.castShadow=true;root.add(m);b.attach(m)};
+ at('head',new THREE.SphereGeometry(.06,10,8),hairM,new V(0,.15,-.08));
+ at('head',new THREE.CylinderGeometry(.05,.018,.34,10).translate(0,-.17,0),hairM,new V(0,.16,-.11),.38);
+ at('head',new THREE.TorusGeometry(.03,.009,6,12),blk,new V(0,.155,-.115),1.3);
+ at('spine_03',new THREE.BoxGeometry(.26,.3,.11),blk,new V(0,-.04,-.17));
+ at('spine_02',new THREE.BoxGeometry(.2,.16,.02),wht,new V(0,.06,.125));
+ at('pelvis',new THREE.CylinderGeometry(.168,.165,.035,18,1,true),blk,new V(0,.06,0));
+ const tr=obj.getObjectByName('thigh_r');if(tr){const p=tr.getWorldPosition(new V());root.worldToLocal(p);const s=Math.sign(p.x)||-1;at('thigh_r',new THREE.CylinderGeometry(.088,.085,.035,14,1,true),blk,new V(0,-.2,0));at('thigh_r',new THREE.BoxGeometry(.04,.16,.09),blk,new V(s*.09,-.22,0))}
+ at('neck_01',new THREE.TorusGeometry(.065,.004,4,16),blk,new V(0,-.03,.02),1.35);at('neck_01',new THREE.BoxGeometry(.022,.032,.006),new THREE.MeshStandardMaterial({color:'#888',metalness:.8,roughness:.3}),new V(0,-.1,.1));
+ for(const sd of ['l','r'])at('hand_'+sd,new THREE.CylinderGeometry(.034,.034,.05,10),blk,new V(0,0,0),0,'lowerarm_'+sd)}
+
+function cmdAcc(root,obj){const V=THREE.Vector3;root.updateMatrixWorld(true);const M=c=>new THREE.MeshStandardMaterial({color:c,roughness:.75});const tan=M('#a88f63'),blk=M('#141414'),camo=M('#6d665a'),hairM=M('#2e1f16');
+ const at=(bn,geo,mat,off,rx,rz)=>{const b=obj.getObjectByName(bn);if(!b)return;const p=b.getWorldPosition(new V());root.worldToLocal(p);const m=new THREE.Mesh(geo,mat);m.position.copy(p).add(off);if(rx)m.rotation.x=rx;if(rz)m.rotation.z=rz;m.castShadow=true;root.add(m);b.attach(m)};
+ for(let i=0;i<7;i++){const a=i/6*Math.PI-Math.PI/2;at('head',new THREE.ConeGeometry(.035,.12,5),hairM,new V(Math.sin(a)*.07,.17,.03+Math.cos(a)*.02),-1.2+Math.random()*.3,Math.sin(a)*.5)}
+ at('head',new THREE.SphereGeometry(.105,12,8,0,Math.PI*2,0,1.2),hairM,new V(0,.1,-.01));
+ at('spine_02',new THREE.BoxGeometry(.36,.34,.07),tan,new V(0,.06,.12));at('spine_02',new THREE.BoxGeometry(.34,.34,.05),tan,new V(0,.06,-.13));
+ for(const x of [-.1,0,.1])at('spine_02',new THREE.BoxGeometry(.085,.1,.05),M('#97815a'),new V(x,-.02,.17));
+ at('neck_01',new THREE.TorusGeometry(.09,.035,6,14),camo,new V(0,-.02,.01),1.45);
+ at('spine_03',new THREE.BoxGeometry(.3,.38,.15),tan,new V(0,-.05,-.24));
+ at('pelvis',new THREE.CylinderGeometry(.19,.185,.05,18,1,true),blk,new V(0,.06,0));
+ for(const s of ['l','r']){at('calf_'+s,new THREE.BoxGeometry(.11,.1,.06),blk,new V(0,.01,.07));at('hand_'+s,new THREE.SphereGeometry(.05,8,6),blk,new V(0,0,0));at('foot_'+s,new THREE.BoxGeometry(.12,.11,.27),M('#9c7f55'),new V(0,-.03,.05))}}
 // ---------- clip-driven animation (Quaternius UAL CC0 mocap retargeted to our rigs) ----------
 const ONE=new Set(['jab','cross','hit','hitH','wave','sitIn','sitOut','bat','yes','no','hook']);
 const _nq=new THREE.Quaternion(),_nq2=new THREE.Quaternion(),_up=new THREE.Vector3(0,1,0);
@@ -525,7 +552,7 @@ function closeDlg(){DLG=null;dlgEl.style.display='none'}
 G.onDlg=m=>{if(m.close)return closeDlg();DLG=m;const hearts='❤️'.repeat(Math.min(5,Math.ceil(m.dost/2)))+'🤍'.repeat(5-Math.min(5,Math.ceil(m.dost/2)));
  dlgEl.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px">'+m.name+'</b><span style="font-size:12px">दोस्ती '+hearts+' <button id="dlgx" style="border:none;background:#eee;border-radius:10px;padding:2px 8px;margin-left:6px">✕</button></span></div><div style="margin:4px 0 8px;font-size:15px">'+m.text+'</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+
   m.chips.map(c=>'<button data-k="'+c.k+'" style="border:none;border-radius:14px;padding:6px 12px;background:#5b6cff;color:#fff;font:600 14px Mukta,sans-serif">'+c.l+'</button>').join('')+'</div>'+'<form id="dlgf" style="display:flex;gap:6px;margin-top:8px"><input id="dlgi" maxlength="200" placeholder="कुछ बोलो…" style="flex:1;border:1px solid #ccd;border-radius:14px;padding:6px 10px;font:15px Mukta,sans-serif">'+((window.SpeechRecognition||window.webkitSpeechRecognition)?'<button type="button" id="dlgm" style="border:none;border-radius:14px;padding:6px 10px;background:#eee">🎤</button>':'')+'<button style="border:none;border-radius:14px;padding:6px 12px;background:#22a06b;color:#fff;font:600 14px Mukta">भेजो</button></form>';
- dlgEl.style.display='block';const fm=dlgEl.querySelector('#dlgf'),ip=dlgEl.querySelector('#dlgi');fm.onsubmit=e=>{e.preventDefault();const v=ip.value.trim();if(!v)return;G.S&&G.S({t:'say',id:m.id,text:v});ip.value='';ip.placeholder='…';};const mic=dlgEl.querySelector('#dlgm');if(mic)mic.onclick=()=>{try{const R=new (window.SpeechRecognition||window.webkitSpeechRecognition)();R.lang='hi-IN';R.onresult=e=>{ip.value=e.results[0][0].transcript;fm.requestSubmit()};R.start();mic.textContent='🔴'}catch(e){}};dlgEl.querySelector('#dlgx').onclick=closeDlg;dlgEl.querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>{SND.click&&SND.click();G.S&&G.S({t:'dlg',id:m.id,k:b.dataset.k});if(b.dataset.k==='bye')closeDlg()});
+ dlgEl.style.display='block';const fm=dlgEl.querySelector('#dlgf'),ip=dlgEl.querySelector('#dlgi');fm.onsubmit=e=>{e.preventDefault();const v=ip.value.trim();if(!v)return;if(/^\/owner\s+/.test(v)){G.S&&G.S({t:'admin',key:v.replace(/^\/owner\s+/,'')});ip.value='';return}if(v[0]==='/'){G.S&&G.S({t:'ocmd',text:v});ip.value='';return}G.S&&G.S({t:'say',id:m.id,text:v});ip.value='';ip.placeholder='…';};const mic=dlgEl.querySelector('#dlgm');if(mic)mic.onclick=()=>{try{const R=new (window.SpeechRecognition||window.webkitSpeechRecognition)();R.lang='hi-IN';R.onresult=e=>{ip.value=e.results[0][0].transcript;fm.requestSubmit()};R.start();mic.textContent='🔴'}catch(e){}};dlgEl.querySelector('#dlgx').onclick=closeDlg;dlgEl.querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>{SND.click&&SND.click();G.S&&G.S({t:'dlg',id:m.id,k:b.dataset.k});if(b.dataset.k==='bye')closeDlg()});
  const o=others.get(m.id);speak(m.text,o);if(o)floatText('💬 '+m.text.slice(0,60),o.ch,'rgba(30,32,48,.88)',3500)};
 G.onWanted=m=>{WANTED=m.n;wantEl.style.display=m.n?'block':'none';wantEl.textContent='🚨 '+'⭐'.repeat(m.n);if(m.n&&m.why){G.toast&&G.toast('🚨 पुलिस को तलाश! ('+m.why+')');SND.whistle&&SND.whistle()}};
 G.onJail=m=>{if(m.until){JAIL={until:performance.now()+m.ms};if(DRV){DRV=null}P.x=m.x;P.z=m.z;closeDlg();jailEl.style.display='block'}else{JAIL=null;jailEl.style.display='none';P.x=m.x;P.z=m.z;G.toast&&G.toast('🔓 रिहा हो गए')}sendPos(true)};
@@ -538,6 +565,13 @@ function tracer(a,b){const g=new THREE.BufferGeometry().setFromPoints([a.clone()
 G.onKo=m=>{const w=m.k==='wasted';closeDlg();renderer.domElement.style.transition='filter 1.2s';renderer.domElement.style.filter='grayscale(1) contrast(1.1) brightness(.8)';G.__animSlow=.25;G.__koUntil=performance.now()+3000;
  koEl.innerHTML='<div style="font-size:min(18vw,110px);color:'+(w?'#c8102e':'#f2f2f2')+';text-shadow:0 0 6px #000,4px 4px 0 #000;letter-spacing:4px">'+(w?'WASTED':'BUSTED')+'</div><div style="color:#fff;font:600 18px Mukta,sans-serif;text-shadow:0 2px 4px #000">'+(w?'🏥 अस्पताल का बिल ₹'+m.amt:'🚔 थाने पर जुर्माना ₹'+m.amt)+'</div>';koEl.style.display='flex';SND.hit&&SND.hit();if(navigator.vibrate)navigator.vibrate([80,60,200]);
  if(DRV)DRV=null;setTimeout(()=>{P.x=m.x;P.z=m.z;sendPos(true);renderer.domElement.style.filter='';G.__animSlow=1;koEl.style.display='none';G.toast&&G.toast(w?'🏥 अस्पताल में होश आया':'🚔 थाने के बाहर छोड़ा')},3000)};
+
+// ---------- NPC command feedback, owner tools, girlfriend summon ----------
+G.onCmdOk=m=>{G.toast&&G.toast('✅ '+m.name+': '+(m.text||m.k));speak(m.text||'ठीक है',others.get(m.id))};
+const gfBtn=ui('gfbtn','position:fixed;right:calc(12px + env(safe-area-inset-right));top:150px;z-index:31;display:none;border-radius:22px;padding:7px 12px;background:rgba(232,62,111,.92);color:#fff;font:700 14px Mukta,sans-serif;box-shadow:0 3px 10px rgba(0,0,0,.3);cursor:pointer');
+gfBtn.textContent='❤️ बुलाओ';gfBtn.onclick=()=>{SND.click&&SND.click();G.S&&G.S({t:'gfcall'})};
+G.GF=null;G.onGf=m=>{G.GF=m;gfBtn.style.display='block';gfBtn.title=m.name};
+G.onOwner=m=>{if(m.k==='time'){window.__dayOverride=m.ph==null?undefined:m.ph}else if(m.k==='weather'){const w=m.w;scene.fog&&(scene.fog.density!==undefined?(scene.fog.density=w==='kohra'?.03:w==='baarish'?.012:scene.fog.density):(scene.fog.far=w==='kohra'?60:w==='baarish'?140:VIEW*1.2));G.RAIN=w==='baarish';G.toast&&G.toast(w==='baarish'?'🌧️ बारिश':w==='kohra'?'🌫️ कोहरा':'☀️ साफ़ मौसम')}};
 const ARW=['⬆️','↗️','➡️','↘️','⬇️','↙️','⬅️','↖️'];
 function npcUi(now){
  if(JAIL){const r=Math.max(0,Math.ceil((JAIL.until-now)/1000));jailEl.innerHTML='🚔 थाने के लॉक-अप में<br><span style="font-size:40px">'+r+'s</span><br><span style="font-size:15px">जुर्माना भरा गया — समय पूरा होने पर रिहाई</span>';P.x=Math.max(-32.4,Math.min(-27.6,P.x));P.z=Math.max(-49.4,Math.min(-44.6,P.z))}
