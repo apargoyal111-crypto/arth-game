@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="hi"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="favicon.ico"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#5b6cff"><title>अर्थ — ज़िंदगी 3D</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -75,6 +75,33 @@ body.full #pclose{display:none}
 #toast{top:150px;background:rgba(42,45,62,.88);font-size:14px;pointer-events:none}
 nav{z-index:10;height:56px}nav button{min-height:56px;font-size:12px}nav button b{font-size:19px}
 body.full .ctl,body.full nav{display:none!important}
+
+/* ---- phone landscape HUD ---- */
+#rot{position:fixed;inset:0;z-index:60;background:linear-gradient(160deg,#3b3f9e,#5b6cff);color:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:20px;font-weight:700}
+#rot .ic{font-size:84px;animation:rot 2s ease-in-out infinite}@keyframes rot{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
+#rot small{display:block;font-weight:400;font-size:14px;opacity:.85;margin-top:10px}
+@media (orientation:portrait) and (pointer:coarse){body:not(.full) #rot{display:flex}}
+@media (orientation:landscape) and (max-height:520px){
+ :root{--t:max(6px,env(safe-area-inset-top));--l:max(8px,env(safe-area-inset-left));--r:max(8px,env(safe-area-inset-right));--b:max(8px,env(safe-area-inset-bottom))}
+ #stats{top:var(--t);left:var(--l);width:168px;padding:4px 8px;font-size:11px}#stats .srow{font-size:11px;margin-bottom:1px}#stats .st{font-size:10px;margin-top:1px}#stats .bar{height:4px}
+ #mm{top:var(--t);right:var(--r);width:92px;height:92px}
+ #lookb{top:var(--t);right:calc(var(--r) + 100px);min-height:32px}#qb{top:calc(var(--t) + 38px);right:calc(var(--r) + 100px);min-height:32px}
+ nav{top:var(--t);bottom:auto;left:50%;right:auto;transform:translateX(-50%);height:40px;border-radius:20px;background:rgba(255,255,255,.88);width:auto;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+ nav button{min-height:40px;padding:0 10px;font-size:0;flex:none}nav button b{font-size:19px}nav .dot{top:0;right:0}
+ #joy{left:calc(var(--l) + 10px);bottom:calc(var(--b) + 4px);width:116px;height:116px}#knob{left:31px;top:31px}
+ .rb{width:58px;height:58px;font-size:11px}
+ #run{right:calc(var(--r) + 6px);bottom:calc(var(--b) + 4px)}
+ #punchB{right:calc(var(--r) + 76px);bottom:calc(var(--b) + 4px)}
+ #sitB{right:calc(var(--r) + 6px);bottom:calc(var(--b) + 74px)}
+ #actB{left:auto;transform:none;right:calc(var(--r) + 72px);bottom:calc(var(--b) + 70px);min-height:48px;padding:6px 14px;font-size:15px;max-width:170px}
+ #meet{bottom:calc(var(--b) + 6px);min-height:40px;font-size:14px}
+ #hint{top:calc(var(--t) + 48px);font-size:12px}
+ #toast{top:calc(var(--t) + 48px)}
+ #pw{top:0;bottom:0;width:max(300px,40vw);border-radius:16px 0 0 16px;padding-right:env(safe-area-inset-right)}
+ body.drawer nav{right:auto;left:calc((100vw - max(300px,40vw))/2);}
+ body.full #pw{width:100%}
+}
+@media (orientation:landscape) and (max-height:380px){#joy{width:100px;height:100px}#knob{left:23px;top:23px}#stats{width:150px}.rb{width:52px;height:52px}#punchB{right:calc(var(--r) + 66px)}#sitB{bottom:calc(var(--b) + 64px)}#actB{right:calc(var(--r) + 64px);bottom:calc(var(--b) + 62px);font-size:14px}}
 </style></head><body>
 <div id="conn">🔌 कनेक्शन टूटा — फिर से जोड़ रहे हैं…</div><div id="toast"></div>
 <div id="stats" style="display:none"></div><canvas id="mm" class="ctl" width="248" height="248"></canvas>
@@ -85,7 +112,7 @@ body.full .ctl,body.full nav{display:none!important}
  <button data-tab="life"><b>📖</b>कहानी</button><button data-tab="world"><b>📰</b>खबरें</button>
  <button data-tab="people"><b>👥</b>लोग<span class="dot" id="dP" style="display:none"></span></button><button data-tab="chat"><b>💬</b>संदेश<span class="dot" id="dC" style="display:none"></span></button>
 </nav>
-<div id="call"></div>
+<div id="call"></div><div id="rot"><div class="ic">📱</div>फ़ोन को आड़ा (landscape) घुमाएँ 🔄<small>अर्थ आड़े फ़ोन पर सबसे अच्छा चलता है</small></div>
 <audio id="remote" autoplay playsinline></audio>
 <script>
 "use strict";
@@ -229,6 +256,9 @@ function rtc(m){var k=m.kind;
  else if(k==='hangup')endCall(false,'कॉल समाप्त');
 }
 connect();
+function goLandscape(){try{var d=document.documentElement;if(!document.fullscreenElement&&d.requestFullscreen){var pr=d.requestFullscreen({navigationUI:'hide'});if(pr&&pr.then)pr.then(lockO).catch(function(){})}else lockO()}catch(e){}}
+function lockO(){try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){}}
+if(matchMedia('(pointer:coarse)').matches){document.addEventListener('pointerdown',function(e){if(e.target.closest&&e.target.closest('input,textarea'))return;goLandscape()},{passive:true})}
 (function(){var b=document.getElementById('qb'),m={auto:'⚙️ ऑटो',hi:'⚙️ HD',lo:'⚙️ हल्का'},n={auto:'hi',hi:'lo',lo:'auto'},c='auto';try{c=localStorage.getItem('zq')||'auto'}catch(e){}b.textContent=m[c];b.onclick=function(){c=n[c];try{localStorage.setItem('zq',c)}catch(e){}toast('क्वालिटी: '+m[c]+' — पेज फिर से लोड हो रहा है');setTimeout(function(){location.reload()},600)}})();
 document.getElementById('lookb').onclick=function(){if(window.openLookPicker&&ME)window.openLookPicker(ME.look||'normal',function(k){S({t:'setLook',look:k})})};
 </script><script src="town.js"></script><script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
