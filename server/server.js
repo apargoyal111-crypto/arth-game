@@ -164,6 +164,7 @@ const H={
   p.cd[k]=t+ACT_CD;mark();send(socks.get(p.id),{t:'gain',text:g.join('  '),cd:p.cd});pushMe(p);bcast({t:'fx',k:'act',id:p.id})},
  dlg(p,m){onDlg(p,m)},
  wanted(p,m){if(!p.admin)return;setWanted(p,Number(m.n)||0,'admin')},
+ hp(p,m){if(!p.admin||!p.life)return;p.life.h=Math.max(1,Math.min(100,Number(m.h)||1));pushMe(p)},
  emote(p,m){const k=['dance','wave'].includes(m.k)?m.k:null;if(!k||!POS.get(p.id))return;const t=now();if(p.emT&&t-p.emT<1500)return;p.emT=t;bcast({t:'fx',k,id:p.id})},
  talk(p,m){if(p.state!=='alive'||!p.life)return;const a=POS.get(p.id),b=POS.get(m.to)||(BOTS.find(x=>x.id===m.to)||null);if(!a||!b||Math.hypot(a.x-b.x,a.z-b.z)>4)return err(p,'पास जाकर बात करो');
   p.cd=p.cd||{};const t=now();if(!p.admin&&p.cd.talk&&t<p.cd.talk)return err(p,'थोड़ा रुको');p.cd.talk=t+ACT_CD;p.life.r=E.cl(p.life.r+3);p.life.j=E.cl(p.life.j+1);
@@ -212,6 +213,7 @@ function botPub(b){return {id:b.id,role:b.role,name:(b.role?'':'🤖 ')+b.name,g
 function botSay(b,text){bcast({t:'say',id:b.id,text})}
 function botFace(b,a){b.ry=Math.atan2(a.x-b.x,a.z-b.z);b.ch=true;b.wait=Math.max(b.wait,2);b.sit=false;b.path=null}
 function botHit(b,p,dx,dz){b.x=Math.max(-T.HALF,Math.min(T.HALF,b.x+dx*1.2));b.z=Math.max(-T.HALF,Math.min(T.HALF,b.z+dz*1.2));b.sit=false;b.ch=true;b.wait=1.2;b.path=null;
+ if(b.role==='police'||b.role==='traffic'){b.hits=(b.hits||0)+1;if(b.hits>=3){b.hits=0;b.down=now()+12000;b.chase=null;bcast({t:'fx',k:'ko',id:b.id});return}}
  if(Math.random()<.7)setTimeout(()=>botSay(b,pickL(BOT_OW)),400);b.flee=true}
 for(let i=0;i<NBOTS;i++){const g=i%2?'f':'m',n=T.NODES[Math.floor(Math.random()*T.NODES.length)];
  BOTS.push({id:'bot'+i,name:BOT_NAMES[g][Math.floor(i/2)%12],g,look:pickL(g==='f'?BOT_LOOK_F:BOT_LOOK_M),age:16+Math.floor(Math.random()*50),x:n[0]+(Math.random()-.5),z:n[1],ry:0,node:T.NODES.indexOf(n),tgt:null,wait:Math.random()*3,sit:false,ch:true,sp:1.3+Math.random()*.5})}
@@ -286,24 +288,31 @@ function roleTick(dt){const ph=dayPhase(),t=now();
 // ---------- wanted / chalan / arrest ----------
 function setWanted(p,n,why){const L=p.life;if(!L)return;const v=Math.max(0,Math.min(5,n));if(v===(p.wanted||0))return;const up=v>(p.wanted||0);p.wanted=v;if(up)p.crimeAt=now();p.decayAt=now();
  sendTo(p.id,{t:'wanted',n:v,why:why||''});if(up&&v>=1)feed('🚨 '+p.name+' की पुलिस को तलाश ('+'⭐'.repeat(v)+')','police')}
-function crime(p,n,why){if(p.jail)return;setWanted(p,(p.wanted||0)+n,why)}
+function crime(p,n,why){setWanted(p,(p.wanted||0)+n,why)}
 function payFine(p,amt,why){const L=p.life;if(!L)return;L.money-=amt;mark();sendTo(p.id,{t:'gain',text:'🧾 '+why+' −₹'+amt});pushMe(p)}
-function arrest(p,cop){const t=now(),st=Math.max(1,p.wanted||1),ms=Math.min(JAIL_BASE*2,JAIL_BASE+(st-1)*JAIL_BASE/4);
- const v=VEHS.find(x=>x.driver===p.id);if(v){v.driver=null;v.used=t;v.ch=true;send(socks.get(p.id),{t:'drive',ok:false})}
- payFine(p,1000*st,'जुर्माना (गिरफ़्तारी)');p.jail=t+ms;p.wanted=0;sendTo(p.id,{t:'wanted',n:0});const o=POS.get(p.id);if(o){o.x=JAIL_C[0];o.z=JAIL_C[1];o.ch=true}
- sendTo(p.id,{t:'jail',until:p.jail,ms,x:JAIL_C[0],z:JAIL_C[1]});if(cop){botSay(cop,'चलो थाने! 🚔');cop.chase=null;cop.route=[];cop.slot=-2}feed('🚔 '+p.name+' को पुलिस ने पकड़ा — '+Math.round(ms/1000)+'s लॉक-अप','police');mark()}
+const HOSP=[-90,42],BILL=Number(env.HOSP_BILL)||1500,SAFE=T.ZONES.filter(z=>z.safe);
+function knock(p,kind,cop){const L=p.life;if(!L)return;const st=Math.max(1,p.wanted||1),o=POS.get(p.id),t=now();
+ const busted=kind==='busted',amt=busted?1000*st:BILL,at=busted?JAIL_OUT:HOSP;
+ L.h=busted?Math.max(L.h,30):45;payFine(p,amt,busted?'जुर्माना (BUSTED)':'अस्पताल का बिल (WASTED)');p.wanted=0;p.hurtAt=0;sendTo(p.id,{t:'wanted',n:0});
+ if(o){o.x=at[0];o.z=at[1];o.ch=true}for(const v of VEHS)if(v.drv===p.id){v.drv=null;v.ch=true}
+ for(const c of POLICE)if(c.chase===p.id){c.chase=null;c.route=[];c.slot=-2}if(PCAR&&PCAR.chase===p.id)PCAR.chase=null;
+ sendTo(p.id,{t:'ko',k:kind,amt,x:at[0],z:at[1]});if(cop)botSay(cop,busted?'पकड़ लिया! 🚔':'बस, बहुत हुआ!');feed((busted?'🚔 BUSTED: ':'💀 WASTED: ')+p.name);pushMe(p)}
+function copHurt(p,c,dmg,k){const L=p.life;if(!L||p.state!=='alive')return;L.h=Math.max(0,L.h-dmg);p.hurtAt=now();bcast({t:'fx',k,id:c.id,to:p.id});bcast({t:'fx',k:'hit',id:p.id});
+ sendTo(p.id,{t:'gain',text:'-'+dmg+' सेहत '+(k==='shot'?'🔫':'🥊')});if(L.h<=0)knock(p,'wasted',c);else pushMe(p)}
+function inSafe(o){return SAFE.some(z=>Math.hypot(o.x-z.bx,o.z-z.bz)<16)}
 function policeTick(dt,t){
  for(const [id,o] of POS){const p=db.players[id];if(!p)continue;
-  if(p.jail){if(t>=p.jail){p.jail=0;o.x=JAIL_OUT[0];o.z=JAIL_OUT[1];o.ch=true;sendTo(id,{t:'jail',until:0,x:JAIL_OUT[0],z:JAIL_OUT[1]});sendTo(id,{t:'notif',text:'🔓 रिहा! अब क़ानून का पालन करना 🙏'})}continue}
+  
   if(p.wanted>0&&t-(p.crimeAt||0)>CRIME_COOL&&t-(p.decayAt||0)>DECAY_MS&&!POLICE.some(c=>c.chase===id)){p.decayAt=t;setWanted(p,p.wanted-1);if(!p.wanted)sendTo(id,{t:'notif',text:'😮‍💨 पुलिस ने तलाश छोड़ दी'})}}
- for(const c of POLICE){if(c.hid)continue;if(c.chase){const o=POS.get(c.chase),p=db.players[c.chase];if(!o||!p||!p.wanted||p.jail||Math.hypot(o.x-c.x,o.z-c.z)>70){c.chase=null;c.slot=-2;c.route=[];continue}
-   const dx=o.x-c.x,dz=o.z-c.z,d=Math.hypot(dx,dz);if(d<1.8||(o.s===2&&d<3.2)){arrest(p,c);continue}const st=Math.min(d,5.6*dt);c.x+=dx/d*st;c.z+=dz/d*st;c.ry=Math.atan2(dx,dz);c.sit=false;c.ch=true;continue}
-  for(const [id,o] of POS){const p=db.players[id];if(p&&p.wanted>0&&!p.jail&&Math.hypot(o.x-c.x,o.z-c.z)<28+p.wanted*6){c.chase=id;c.route=[];botSay(c,pickL(['रुको! पुलिस! 🚨','भागो मत! 👮','पकड़ो उसे!']));bcast({t:'fx',k:'whistle',id:c.id});break}}}
+ for(const c of POLICE){if(c.hid)continue;if(c.chase){const o=POS.get(c.chase),p=db.players[c.chase];if(!o||!p||!p.wanted||Math.hypot(o.x-c.x,o.z-c.z)>70||(p.wanted<=2&&inSafe(o))){c.chase=null;c.slot=-2;c.route=[];continue}
+   const dx=o.x-c.x,dz=o.z-c.z,d=Math.hypot(dx,dz);if(c.down&&t<c.down){continue}c.down=0;if(d<1.8){if(p.life&&p.life.h<25&&o.s!==2){knock(p,'busted',c);continue}if(t-(c.atk||0)>1100){c.atk=t;copHurt(p,c,p.wanted<=2?(Math.random()<.5?4:6):7,p.wanted<=2?'lathi':'punch')}continue}
+   if(p.wanted>=4&&d<16&&t-(c.atk||0)>1600){c.atk=t;copHurt(p,c,6,'shot')}const st=Math.min(d,5.6*dt);c.x+=dx/d*st;c.z+=dz/d*st;c.ry=Math.atan2(dx,dz);c.sit=false;c.ch=true;continue}
+  for(const [id,o] of POS){const p=db.players[id];if(p&&p.wanted>0&&!(p.wanted<=2&&inSafe(o))&&!(c.down&&t<c.down)&&Math.hypot(o.x-c.x,o.z-c.z)<28+p.wanted*6){c.chase=id;c.route=[];botSay(c,pickL(['रुको! पुलिस! 🚨','भागो मत! 👮','पकड़ो उसे!']));bcast({t:'fx',k:'whistle',id:c.id});break}}}
  patrolTick(dt,t)}
 const PATROL=[[-58,-58],[58,-58],[58,58],[-58,58]];let PCAR=null;
 function patrolTick(dt,t){const v=PCAR;if(!v)return;let tx,tz,sp=8;const tgt=v.chase&&POS.get(v.chase),tp=v.chase&&db.players[v.chase];
- if(tgt&&tp&&tp.wanted&&!tp.jail&&Math.hypot(tgt.x-v.x,tgt.z-v.z)<90){tx=tgt.x;tz=tgt.z;sp=13.5;if(Math.hypot(tx-v.x,tz-v.z)<3.2){arrest(tp,null);v.chase=null}}
- else{if(v.chase){v.chase=null;v.ch=true}for(const [id,o] of POS){const p=db.players[id];if(p&&p.wanted>=2&&!p.jail&&Math.hypot(o.x-v.x,o.z-v.z)<60){v.chase=id;v.ch=true;break}}
+ if(tgt&&tp&&tp.wanted&&Math.hypot(tgt.x-v.x,tgt.z-v.z)<90){tx=tgt.x;tz=tgt.z;sp=13.5;if(tp.wanted>=3){const a=Math.atan2(tx-v.x,tz-v.z),d=Math.hypot(tx-v.x,tz-v.z);if(d<9){v.ry=a+Math.PI/2;v.ch=true;return}}else if(Math.hypot(tx-v.x,tz-v.z)<4){return}}
+ else{if(v.chase){v.chase=null;v.ch=true}for(const [id,o] of POS){const p=db.players[id];if(p&&p.wanted>=2&&Math.hypot(o.x-v.x,o.z-v.z)<60){v.chase=id;v.ch=true;break}}
   const w=PATROL[v.wp];tx=w[0];tz=w[1];if(Math.hypot(tx-v.x,tz-v.z)<1){v.wp=(v.wp+1)%4;return}}
  const dx=tx-v.x,dz=tz-v.z,d=Math.hypot(dx,dz)||1,st=Math.min(d,sp*dt);v.x+=dx/d*st;v.z+=dz/d*st;v.ry=Math.atan2(dx,dz);v.ch=true}
 // dialogue: tap-to-talk with reply chips
@@ -334,7 +343,7 @@ function onDlg(p,m){if(p.state!=='alive'||!p.life||p.jail)return;const b=npcOf(p
  if(R.police){if(k==='dir'){return dlg(p,b,'कहाँ जाना है?',['market','hospital','temple','school','park','stadium'].map(id=>({k:'to:'+id,l:T.ZONES.find(z=>z.id===id).n})))}
   if(k.startsWith('to:')){const z=T.ZONES.find(q=>q.id===k.slice(3));if(!z)return;return dlg(p,b,'👉 '+dirText(POS.get(p.id),z)+'। मिनी-मैप में देखो!')}
   if(k==='complain'){if(!p.admin&&p.cd.cmp&&t<p.cd.cmp)return dlg(p,b,'आपकी शिकायत पहले ही दर्ज है 📝');p.cd.cmp=t+60000;feed('📝 '+p.name+' ने थाने में शिकायत दर्ज कराई','police');return dlg(p,b,'शिकायत दर्ज हो गई ✅ नंबर #'+(1000+Math.floor(Math.random()*9000))+'। हम जल्द कार्रवाई करेंगे 👮')}
-  if(k==='surrender'&&p.wanted){p.wanted=Math.max(1,p.wanted-1);send(socks.get(p.id),{t:'dlg',id:b.id,close:1});return arrest(p,b)}}}
+  if(k==='surrender'&&p.wanted){p.wanted=Math.max(1,p.wanted-1);send(socks.get(p.id),{t:'dlg',id:b.id,close:1});return knock(p,'busted',b)}}}
 function gigCheck(p,o){const g=p.gig;if(!g)return;if(now()>g.until){p.gig=null;sendTo(p.id,{t:'gig',to:null});return sendTo(p.id,{t:'notif',text:'⌛ डिलीवरी का समय निकल गया'})}
  const z=T.ZONES.find(q=>q.id===g.to);if(z&&Math.hypot(o.x-z.x,o.z-z.z)<6&&p.life){p.life.money+=g.pay;p.life.j=E.cl(p.life.j+2);p.npcf=p.npcf||{};p.npcf[g.from]=(p.npcf[g.from]||0)+2;p.gig=null;mark();sendTo(p.id,{t:'gig',to:null});sendTo(p.id,{t:'gain',text:'📦 डिलीवरी पूरी! +₹'+g.pay+'  +2 खुशी  +दोस्ती'});pushMe(p)}}
 // chalan: overspeeding seen by police
@@ -397,7 +406,7 @@ wss.on('connection',(ws,req)=>{
     const old=socks.get(p.id);if(old&&old!==ws){socks.delete(p.id);send(old,{t:'err',text:'दूसरी जगह से लॉगिन हुआ'});try{old.close()}catch(e){}}
     me=p;ws.pid=p.id;socks.set(p.id,ws);
     send(ws,{t:'auth',token:p.token,id:p.id,ice:ICE,cfg:{pregMs:PREG_MS,turnMs:TURN_MS,scale:SCALE}});
-    pushMe(p);if(p.wanted)send(ws,{t:'wanted',n:p.wanted});if(p.jail&&p.jail>now())send(ws,{t:'jail',until:p.jail,ms:p.jail-now(),x:JAIL_C[0],z:JAIL_C[1]});if(p.gig){const z=T.ZONES.find(q=>q.id===p.gig.to);if(z)send(ws,{t:'gig',to:z.id,n:z.n,pay:p.gig.pay,x:z.x,z:z.z})}send(ws,{t:'world',w:worldView()});pushPlayers();send(ws,{t:'vehs',list:VEHS.map(vehView)});return}
+    pushMe(p);if(p.wanted)send(ws,{t:'wanted',n:p.wanted});if(p.gig){const z=T.ZONES.find(q=>q.id===p.gig.to);if(z)send(ws,{t:'gig',to:z.id,n:z.n,pay:p.gig.pay,x:z.x,z:z.z})}send(ws,{t:'world',w:worldView()});pushPlayers();send(ws,{t:'vehs',list:VEHS.map(vehView)});return}
    if(m.t==='admin'){const K=String(env.ADMIN_KEY||''),k=String(m.key||'');
     if(!me||!K||k.length!==K.length||!crypto.timingSafeEqual(Buffer.from(k),Buffer.from(K)))return send(ws,{t:'err',text:'गलत एडमिन कुंजी'});
     me.admin=true;mark();if(me.state==='preg'){startLife(me);pushPlayers()}pushMe(me);return send(ws,{t:'err',text:'👑 स्पेशल एक्सेस चालू!'})}

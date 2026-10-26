@@ -468,7 +468,7 @@ const motes=new THREE.Points(mG,new THREE.PointsMaterial({color:'#fff2c4',size:.
 const SND=G.SND||{};const vib=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
 G.onGain=t=>{if(me){floatText(t,me);burst(P.x,1.6,P.z,/-/.test(t)&&!/\+/.test(t)?'#ff6b6b':'#ffd166',18,2);SND.act&&SND.act()}};
 G.onSay=m=>{const ch=charOf(m.id);if(!ch||camera.position.distanceTo(ch.position)>45)return;floatText('💬 '+m.text,ch,'rgba(30,32,48,.88)',4000)};
-G.onFx=m=>{if(m.k==='whistle'&&SND.whistle)SND.whistle();const ch=charOf(m.id);const now=performance.now();if(m.k==='punch'&&G.ME&&m.id===G.ME.id)return;if(ch)ch.userData.fx[m.k==='hit'?'hit':m.k]=now;
+G.onFx=m=>{if(m.k==='lathi'||m.k==='shot'){if(m.k==='shot'){SND.shot?SND.shot():SND.punch&&SND.punch();const a=charOf(m.id),b=charOf(m.to);if(a&&b)tracer(a.position,b.position)}else SND.punch&&SND.punch();m={...m,k:'punch'}}if(m.k==='ko'){m={...m,k:'hit'}}if(m.k==='whistle'&&SND.whistle)SND.whistle();const ch=charOf(m.id);const now=performance.now();if(m.k==='punch'&&G.ME&&m.id===G.ME.id)return;if(ch)ch.userData.fx[m.k==='hit'?'hit':m.k]=now;
  if(m.k==='push'&&G.ME&&m.id===G.ME.id){P.x+=m.dx*1.5;P.z+=m.dz*1.5;collide();P.sit=0;return}
  if(m.k==='act'&&ch&&ch!==me)burst(ch.position.x,1.5,ch.position.z,'#ffd166',8,1.5);
  if(m.k==='hit'){if(ch){burst(ch.position.x,1.4,ch.position.z,'#ffb347',26,4);SND.hit&&SND.hit();ch.position.x+=m.dx*.6;ch.position.z+=m.dz*.6;floatText('💥',ch,'rgba(229,72,77,.9)',900)}
@@ -530,6 +530,13 @@ G.onWanted=m=>{WANTED=m.n;wantEl.style.display=m.n?'block':'none';wantEl.textCon
 G.onJail=m=>{if(m.until){JAIL={until:performance.now()+m.ms};if(DRV){DRV=null}P.x=m.x;P.z=m.z;closeDlg();jailEl.style.display='block'}else{JAIL=null;jailEl.style.display='none';P.x=m.x;P.z=m.z;G.toast&&G.toast('🔓 रिहा हो गए')}sendPos(true)};
 G.onGig=m=>{GIG=m.to?m:null;gigEl.style.display=GIG?'block':'none'};
 G.onChalan=m=>{SND.whistle&&SND.whistle();G.toast&&G.toast('🧾 चालान कटा! ₹'+m.amt+' — '+m.kmh+' km/h, धीरे चलाओ 🚦')};
+
+// ---------- GTA-style WASTED / BUSTED ----------
+const koEl=ui('koel','position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;flex-direction:column;pointer-events:none;background:radial-gradient(transparent 30%,rgba(0,0,0,.55));font-family:Pricedown,Impact,Mukta,sans-serif');
+function tracer(a,b){const g=new THREE.BufferGeometry().setFromPoints([a.clone().setY(1.4),b.clone().setY(1.3)]);const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:'#ffe08a'}));scene.add(l);setTimeout(()=>{scene.remove(l);g.dispose()},120)}
+G.onKo=m=>{const w=m.k==='wasted';closeDlg();renderer.domElement.style.transition='filter 1.2s';renderer.domElement.style.filter='grayscale(1) contrast(1.1) brightness(.8)';G.__animSlow=.25;G.__koUntil=performance.now()+3000;
+ koEl.innerHTML='<div style="font-size:min(18vw,110px);color:'+(w?'#c8102e':'#f2f2f2')+';text-shadow:0 0 6px #000,4px 4px 0 #000;letter-spacing:4px">'+(w?'WASTED':'BUSTED')+'</div><div style="color:#fff;font:600 18px Mukta,sans-serif;text-shadow:0 2px 4px #000">'+(w?'🏥 अस्पताल का बिल ₹'+m.amt:'🚔 थाने पर जुर्माना ₹'+m.amt)+'</div>';koEl.style.display='flex';SND.hit&&SND.hit();if(navigator.vibrate)navigator.vibrate([80,60,200]);
+ if(DRV)DRV=null;setTimeout(()=>{P.x=m.x;P.z=m.z;sendPos(true);renderer.domElement.style.filter='';G.__animSlow=1;koEl.style.display='none';G.toast&&G.toast(w?'🏥 अस्पताल में होश आया':'🚔 थाने के बाहर छोड़ा')},3000)};
 const ARW=['⬆️','↗️','➡️','↘️','⬇️','↙️','⬅️','↖️'];
 function npcUi(now){
  if(JAIL){const r=Math.max(0,Math.ceil((JAIL.until-now)/1000));jailEl.innerHTML='🚔 थाने के लॉक-अप में<br><span style="font-size:40px">'+r+'s</span><br><span style="font-size:15px">जुर्माना भरा गया — समय पूरा होने पर रिहाई</span>';P.x=Math.max(-32.4,Math.min(-27.6,P.x));P.z=Math.max(-49.4,Math.min(-44.6,P.z))}
