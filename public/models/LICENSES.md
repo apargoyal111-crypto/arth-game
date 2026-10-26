@@ -30,3 +30,6 @@ Earlier Mixamo-derived models (soldier/michelle/Xbot) were never committed to th
 - `tex/*.webp`: textures from **ambientCG** (https://ambientcg.com). License: **CC0 1.0**. Asphalt026C (road), PavingStones130 (pave), Grass004 (grass), Bricks076C (brick), Plaster003 (plaster). Colour maps are 512px; `_n` normal maps (GL) are 256px.
 - `vendor/jsm/postprocessing/*` and `vendor/jsm/shaders/*`: three.js r186 add-ons (EffectComposer, UnrealBloomPass, OutputPass and others). License: **MIT**.
 - Buildings, Hindi signboards, shutters, grills, gates and window and weathering textures are procedural (code plus canvas). Auto-rickshaw and scooter are procedural meshes.
+
+## Animations
+- `anim_m.json`, `anim_f.json`: retargeted from **Universal Animation Library (Standard)** by Quaternius — CC0 1.0 — https://quaternius.itch.io/universal-animation-library

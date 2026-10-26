@@ -297,7 +297,7 @@ function knock(p,kind,cop){const L=p.life;if(!L)return;const st=Math.max(1,p.wan
  if(o){o.x=at[0];o.z=at[1];o.ch=true}for(const v of VEHS)if(v.drv===p.id){v.drv=null;v.ch=true}
  for(const c of POLICE)if(c.chase===p.id){c.chase=null;c.route=[];c.slot=-2}if(PCAR&&PCAR.chase===p.id)PCAR.chase=null;
  sendTo(p.id,{t:'ko',k:kind,amt,x:at[0],z:at[1]});if(cop)botSay(cop,busted?'पकड़ लिया! 🚔':'बस, बहुत हुआ!');feed((busted?'🚔 BUSTED: ':'💀 WASTED: ')+p.name);pushMe(p)}
-function copHurt(p,c,dmg,k){const L=p.life;if(!L||p.state!=='alive')return;L.h=Math.max(0,L.h-dmg);p.hurtAt=now();bcast({t:'fx',k,id:c.id,to:p.id});bcast({t:'fx',k:'hit',id:p.id});
+function copHurt(p,c,dmg,k){const L=p.life;if(!L||p.state!=='alive')return;L.h=Math.max(0,L.h-dmg);p.hurtAt=now();const o=POS.get(p.id),dx=o?o.x-c.x:0,dz=o?o.z-c.z:0,dd=Math.hypot(dx,dz)||1;bcast({t:'fx',k,id:c.id,to:p.id});bcast({t:'fx',k:'hit',id:p.id,dx:dx/dd*.5,dz:dz/dd*.5});
  sendTo(p.id,{t:'gain',text:'-'+dmg+' सेहत '+(k==='shot'?'🔫':'🥊')});if(L.h<=0)knock(p,'wasted',c);else pushMe(p)}
 function inSafe(o){return SAFE.some(z=>Math.hypot(o.x-z.bx,o.z-z.bz)<16)}
 function policeTick(dt,t){

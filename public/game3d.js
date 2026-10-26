@@ -384,7 +384,7 @@ function matFor(key,src,L,skin,glamOn,seed,hair,old){const nm=src.name||'';const
 const capG=new THREE.CapsuleGeometry(.25,1.1,3,8);
 const blobT=ctex(64,(x,s)=>{const g=x.createRadialGradient(32,32,2,32,32,30);g.addColorStop(0,'rgba(0,0,0,.55)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,s,s)});
 const blobM=new THREE.MeshBasicMaterial({map:blobT,transparent:true,depthWrite:false}),blobG=new THREE.PlaneGeometry(1.3,1.3).rotateX(-Math.PI/2);
-function makeChar(g,name,look,seed,age,bot){const root=new THREE.Group();const lk=LOOKS[look]?look:'normal';
+function makeChar(g,name,look,seed,age,bot){const root=new THREE.Group();root.userData.g=g;const lk=LOOKS[look]?look:'normal';
  const o=OUT[g==='f'?'f':'m'][Math.floor(hash(seed+'o')*7)],L=LOOKS[lk];const far=new THREE.Mesh(capG,new THREE.MeshLambertMaterial({color:L.tint||(L.outfit?L.outfit[0]:o[0])}));far.position.y=.85;root.add(far);const blob=new THREE.Mesh(blobG,blobM);blob.position.y=.03;blob.renderOrder=1;root.add(blob);root.userData.blob=blob;
  Object.assign(root.userData,{g,look:lk,seed:seed||name||Math.random(),age:age||25,far,acc:0,bot,fx:{punch:-9,hit:-9,wave:-9,act:-9},sit:0,sitW:0});
  if(name){const t=label(name,bot?'rgba(90,90,110,.82)':g==='f'?'rgba(200,60,130,.85)':'rgba(40,90,190,.85)');t.scale.multiplyScalar(0.42);t.position.y=2.15;t.visible=false;root.add(t);root.userData.tag=t}
@@ -471,8 +471,8 @@ G.onSay=m=>{const ch=charOf(m.id);if(!ch||camera.position.distanceTo(ch.position
 G.onFx=m=>{if(m.k==='lathi'||m.k==='shot'){if(m.k==='shot'){SND.shot?SND.shot():SND.punch&&SND.punch();const a=charOf(m.id),b=charOf(m.to);if(a&&b)tracer(a.position,b.position)}else SND.punch&&SND.punch();m={...m,k:'punch'}}if(m.k==='ko'){m={...m,k:'hit'}}if(m.k==='whistle'&&SND.whistle)SND.whistle();const ch=charOf(m.id);const now=performance.now();if(m.k==='punch'&&G.ME&&m.id===G.ME.id)return;if(ch)ch.userData.fx[m.k==='hit'?'hit':m.k]=now;
  if(m.k==='push'&&G.ME&&m.id===G.ME.id){P.x+=m.dx*1.5;P.z+=m.dz*1.5;collide();P.sit=0;return}
  if(m.k==='act'&&ch&&ch!==me)burst(ch.position.x,1.5,ch.position.z,'#ffd166',8,1.5);
- if(m.k==='hit'){if(ch){burst(ch.position.x,1.4,ch.position.z,'#ffb347',26,4);SND.hit&&SND.hit();ch.position.x+=m.dx*.6;ch.position.z+=m.dz*.6;floatText('💥',ch,'rgba(229,72,77,.9)',900)}
-  if(G.ME&&m.id===G.ME.id){P.x+=m.dx*1.2;P.z+=m.dz*1.2;collide();P.sit=0;shake=now;vib(80)}}};
+ if(m.k==='hit'){if(ch){burst(ch.position.x,1.4,ch.position.z,'#ffb347',26,4);SND.hit&&SND.hit();ch.position.x+=(m.dx||0)*.6;ch.position.z+=(m.dz||0)*.6;floatText('💥',ch,'rgba(229,72,77,.9)',900)}
+  if(G.ME&&m.id===G.ME.id){P.x+=(m.dx||0)*1.2;P.z+=(m.dz||0)*1.2;collide();P.sit=0;shake=now;vib(80)}}};
 let shake=-9,stepT=0;
 // ---------- input ----------
 const key={};addEventListener('keydown',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;const k=e.key.toLowerCase();if(!key[k]){if(k==='f')doPunch();if(k==='c')doSit();if(k==='e'||k==='g')doAct();if(k==='h')honk()}key[k]=true;if(e.key==='Shift')running=true});
@@ -520,12 +520,13 @@ const dlgEl=ui('dlg','position:fixed;left:50%;bottom:calc(10px + env(safe-area-i
 const wantEl=ui('wanted','position:fixed;left:50%;top:52px;transform:translateX(-50%);z-index:30;padding:2px 12px;border-radius:14px;background:rgba(120,0,0,.75);color:#ffd34d;font-size:20px;letter-spacing:2px;display:none;pointer-events:none');
 const jailEl=ui('jailo','position:fixed;inset:0;z-index:34;pointer-events:none;display:none;background:repeating-linear-gradient(90deg,rgba(20,20,20,.55) 0 10px,transparent 10px 70px);color:#fff;font:700 22px Mukta,sans-serif;text-align:center;padding-top:70px;text-shadow:0 2px 6px #000');
 const gigEl=ui('gigp','position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:30;padding:3px 12px;border-radius:12px;background:rgba(255,159,28,.92);color:#222;font:600 14px Mukta,sans-serif;display:none;pointer-events:none');
+function speak(text,o){try{if(!window.speechSynthesis||localStorage.getItem('zmute')==='1')return;const t=String(text).replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF]/gu,'').trim();if(!t)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t.slice(0,160));u.lang='hi-IN';const f=o&&o.ch&&o.ch.userData.g==='f';const vs=speechSynthesis.getVoices().filter(v=>/^hi/i.test(v.lang));const v=vs.find(v=>f?/female|swara|kalpana|lekha/i.test(v.name):/male|madhur|hemant/i.test(v.name)&&!/female/i.test(v.name))||vs[0];if(v)u.voice=v;u.pitch=f?1.25:.9;u.rate=1;u.volume=.55;speechSynthesis.speak(u)}catch(e){}}
 function closeDlg(){DLG=null;dlgEl.style.display='none'}
 G.onDlg=m=>{if(m.close)return closeDlg();DLG=m;const hearts='❤️'.repeat(Math.min(5,Math.ceil(m.dost/2)))+'🤍'.repeat(5-Math.min(5,Math.ceil(m.dost/2)));
  dlgEl.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px">'+m.name+'</b><span style="font-size:12px">दोस्ती '+hearts+' <button id="dlgx" style="border:none;background:#eee;border-radius:10px;padding:2px 8px;margin-left:6px">✕</button></span></div><div style="margin:4px 0 8px;font-size:15px">'+m.text+'</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+
   m.chips.map(c=>'<button data-k="'+c.k+'" style="border:none;border-radius:14px;padding:6px 12px;background:#5b6cff;color:#fff;font:600 14px Mukta,sans-serif">'+c.l+'</button>').join('')+'</div>';
  dlgEl.style.display='block';dlgEl.querySelector('#dlgx').onclick=closeDlg;dlgEl.querySelectorAll('button[data-k]').forEach(b=>b.onclick=()=>{SND.click&&SND.click();G.S&&G.S({t:'dlg',id:m.id,k:b.dataset.k});if(b.dataset.k==='bye')closeDlg()});
- const o=others.get(m.id);if(o)floatText('💬 '+m.text.slice(0,60),o.ch,'rgba(30,32,48,.88)',3500)};
+ const o=others.get(m.id);speak(m.text,o);if(o)floatText('💬 '+m.text.slice(0,60),o.ch,'rgba(30,32,48,.88)',3500)};
 G.onWanted=m=>{WANTED=m.n;wantEl.style.display=m.n?'block':'none';wantEl.textContent='🚨 '+'⭐'.repeat(m.n);if(m.n&&m.why){G.toast&&G.toast('🚨 पुलिस को तलाश! ('+m.why+')');SND.whistle&&SND.whistle()}};
 G.onJail=m=>{if(m.until){JAIL={until:performance.now()+m.ms};if(DRV){DRV=null}P.x=m.x;P.z=m.z;closeDlg();jailEl.style.display='block'}else{JAIL=null;jailEl.style.display='none';P.x=m.x;P.z=m.z;G.toast&&G.toast('🔓 रिहा हो गए')}sendPos(true)};
 G.onGig=m=>{GIG=m.to?m:null;gigEl.style.display=GIG?'block':'none'};
