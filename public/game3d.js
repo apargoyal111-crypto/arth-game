@@ -645,7 +645,7 @@ cv.addEventListener('pointermove',e=>{if(pinch0||!drag||e.pointerId!==drag.id)re
 cv.addEventListener('pointerup',e=>{if(drag&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)<8&&performance.now()-drag.t<400)tap(e);drag=null});
 cv.addEventListener('pointercancel',()=>drag=null);
 const ray=new THREE.Raycaster(),v2=new THREE.Vector2();
-function tap(e){v2.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);ray.setFromCamera(v2,camera);
+function tap(e){const r=cv.getBoundingClientRect();v2.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);ray.setFromCamera(v2,camera);
  const objs=[];for(const o of others.values())if(o.ch.visible)objs.push(o.ch);const hit=ray.intersectObjects(objs,true)[0];
  if(hit){let n=hit.object;while(n&&!n.userData.pid)n=n.parent;if(!n||!G.S)return;if(n.userData.role){if(Math.hypot(n.position.x-P.x,n.position.z-P.z)<4.5){G.S({t:'talk',to:n.userData.pid});if(me)me.userData.fx.wave=performance.now()}else G.toast&&G.toast('🚶 बात करने के लिए पास जाओ')}else G.S({t:'profile',id:n.userData.pid})}}
 // ---------- other players + bots ----------
@@ -884,8 +884,11 @@ function drawMM(){const S=MMS,c=S/2,now=performance.now();const spd=DRV?Math.abs
  const n=[c+sy*(c-16),c-cy*(c-16)];mx.fillStyle='#e23';mx.beginPath();mx.arc(n[0],n[1],13,0,7);mx.fill();mx.fillStyle='#fff';mx.font='bold 16px sans-serif';mx.fillText('N',n[0],n[1]+1);
  const fa=Math.atan2(Math.sin(P.ry)*cy-Math.cos(P.ry)*sy,-(Math.sin(P.ry)*sy+Math.cos(P.ry)*cy));mx.save();mx.translate(c,c);mx.rotate(fa);mx.fillStyle='#fff';mx.strokeStyle='#123';mx.lineWidth=2;mx.beginPath();mx.moveTo(0,-13);mx.lineTo(9,10);mx.lineTo(0,5);mx.lineTo(-9,10);mx.closePath();mx.fill();mx.stroke();mx.restore()}
 // ---------- loop ----------
-function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<h?70:58;camera.updateProjectionMatrix();if(composer){composer.setPixelRatio(renderer.getPixelRatio());composer.setSize(w,h)}}
-addEventListener('resize',resize);resize();
+function viewportSize(){const vv=window.visualViewport;let w=Math.max(document.documentElement.clientWidth||0,innerWidth||0);let h=Math.max(document.documentElement.clientHeight||0,innerHeight||0);if(vv){w=Math.max(w,Math.round(vv.width));h=Math.max(h,Math.round(vv.height))}return [Math.max(1,w),Math.max(1,h)]}
+function resize(){const [w,h]=viewportSize();cv.style.width=w+'px';cv.style.height=h+'px';cv.style.left='0';cv.style.top='0';renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<h?70:58;camera.updateProjectionMatrix();if(composer){composer.setPixelRatio(renderer.getPixelRatio());composer.setSize(w,h)}}
+addEventListener('resize',resize);addEventListener('orientationchange',()=>setTimeout(resize,60));
+if(window.visualViewport){visualViewport.addEventListener('resize',resize);visualViewport.addEventListener('scroll',resize)}
+resize();
 const meet=$('meet'),actB=$('actB');let meetId=null;meet.addEventListener('click',()=>{if(meetId&&G.S){G.S({t:'talk',to:meetId});if(me)me.userData.fx.wave=performance.now()}});
 let sndT=0,camNear=[],camNearT=0,last=performance.now(),lastSend=0,sent={x:0,z:0,ry:0,s:0},lastDay=-1,dayT=performance.now(),saveT=0,cullT=0,mmT=0;
 function collide(){for(const c of colsNear(P.x,P.z)){const r=0.4;if(P.x>c.x0-r&&P.x<c.x1+r&&P.z>c.z0-r&&P.z<c.z1+r){const dx1=P.x-(c.x0-r),dx2=(c.x1+r)-P.x,dz1=P.z-(c.z0-r),dz2=(c.z1+r)-P.z;const m=Math.min(dx1,dx2,dz1,dz2);if(m===dx1)P.x=c.x0-r;else if(m===dx2)P.x=c.x1+r;else if(m===dz1)P.z=c.z0-r;else P.z=c.z1+r}}
