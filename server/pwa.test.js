@@ -12,10 +12,16 @@ ok(/apple-mobile-web-app-status-bar-style" content="black-translucent"/.test(htm
 ok(/viewport-fit=cover/.test(html),'viewport-fit=cover');
 ok(/apple-touch-icon\.png/.test(html),'apple-touch-icon linked');
 ok(/Add to Home Screen/.test(html)&&/a2hs/.test(html),'iOS A2HS hint present');
-ok(fs.existsSync(path.join(root,'sw.js'))&&/serviceWorker\.register\('\/sw\.js'\)/.test(html),'service worker file + register');
+ok(fs.existsSync(path.join(root,'sw.js'))&&/serviceWorker\.register\(\s*'\/sw\.js/.test(html),'service worker file + register');
 ok(/background:#000/.test(html)&&/#c3d\{[^}]*100dvh/.test(html.replace(/\n/g,'')),'body black + canvas 100dvh');
 ok(!/#9fc7ef/.test(html),'old blue shell background removed');
+ok(!/<nav[\s>]/.test(html)&&!/data-tab="life"/.test(html),'top menu bar (📖📰👥💬) removed');
+ok(/openChatPanel/.test(html),'openChatPanel hook for side chat button');
+ok(/ARTH_BUILD|version\.js/.test(html),'build version script present');
 const g=fs.readFileSync(path.join(root,'game3d.js'),'utf8');
 ok(/visualViewport/.test(g)&&/viewportSize/.test(g),'game3d uses visualViewport sizing');
+ok(/chatBtn|chatB/.test(g)&&/openChatPanel/.test(g),'side 💬 chat button near mic');
+const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');
+ok(/arth-shell-v3/.test(sw)&&/network-first|cache:'no-store'|no-store/.test(sw),'SW v3 network-first for shell');
 console.log(`RESULT: ${pass} passed, ${fail} failed`);
 process.exit(fail?1:0);

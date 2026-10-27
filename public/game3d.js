@@ -720,6 +720,10 @@ G.onWifefx=m=>{if(m.k==='warp'&&m.x!=null){P.x=m.x;P.z=m.z;sendPos(true);return}
 // ---- Voice push-to-talk (Web Speech API, hi-IN, iOS-safe start-in-tap) ----
 const micBtn=ui('micB','position:fixed;left:calc(14px + env(safe-area-inset-left));bottom:calc(200px + env(safe-area-inset-bottom));z-index:33;width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,.5);background:rgba(91,108,255,.55);color:#fff;font:700 28px Mukta,sans-serif;display:flex;align-items:center;justify-content:center;touch-action:manipulation;user-select:none;backdrop-filter:blur(4px);box-shadow:0 4px 14px rgba(0,0,0,.35)');
 micBtn.textContent='🎤';micBtn.title='बोलकर बात करो';
+const chatBtn=ui('chatB','position:fixed;left:calc(14px + env(safe-area-inset-left));bottom:calc(274px + env(safe-area-inset-bottom));z-index:33;width:56px;height:56px;border-radius:50%;border:2px solid rgba(255,255,255,.45);background:rgba(20,22,40,.62);color:#fff;font:700 24px Mukta,sans-serif;display:flex;align-items:center;justify-content:center;touch-action:manipulation;user-select:none;backdrop-filter:blur(4px);box-shadow:0 4px 14px rgba(0,0,0,.35)');
+chatBtn.textContent='💬';chatBtn.title='संदेश / ज़ोया';
+chatBtn.addEventListener('click',()=>{try{if(window.openChatPanel)window.openChatPanel();else if(G.toast)G.toast('💬 चैट तैयार नहीं')}catch(e){}});
+
 const vBub=ui('vbub','position:fixed;left:50%;bottom:calc(220px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:34;display:none;max-width:80vw;padding:8px 14px;border-radius:16px;background:rgba(20,22,40,.88);color:#fff;font:600 15px Mukta,sans-serif;pointer-events:none;text-align:center');
 let __rec=null,__voiceIn=0;
 function stopVoiceUI(){micBtn.textContent='🎤';micBtn.style.background='rgba(91,108,255,.55)';vBub.style.display='none';__voiceIn=0}

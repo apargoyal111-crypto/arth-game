@@ -138,10 +138,7 @@ body.full #pw{background:radial-gradient(circle at 50% 20%,#4b5bdc,#1a1d3a 75%)}
 <canvas id="c3d"></canvas><div id="vig"></div><div id="load"><div class="logo">अर्थ</div><div class="tag">ज़िंदगी · 3D शहर · असली लोग</div><div class="pb"><i id="lpb"></i></div><small id="lpt">लोड हो रहा है…</small></div>
 <div id="pw"><div id="pclose"><button id="pcb">✕ बंद करो</button></div><div class="wrap" id="app"><h1>🌧️ ज़िंदगी ऑनलाइन</h1><p class="small" style="text-align:center">सर्वर से जुड़ रहे हैं…</p></div></div>
 <div class="ctl" id="joy"><div id="knob"></div></div><button class="ctl rb" id="run">🏃<br>दौड़</button><button class="ctl rb" id="punchB">👊<br>पंच</button><button class="ctl rb" id="sitB">🪑<br>बैठो</button><button id="actB"></button><button class="ctl rb dv" id="gasB">⏩<br>तेज़</button><button class="ctl rb dv" id="brakeB">⏪<br>ब्रेक</button><button class="ctl rb dv" id="exitB">🚪<br>उतरो</button><button class="ctl rb dv" id="hornB">📯<br>हॉर्न</button><button class="ctl" id="muteB">🔊</button><button class="ctl" id="lookb">👗 लुक</button><button class="ctl" id="qb">⚙️ ऑटो</button><button id="meet"></button><div class="ctl" id="hint"></div>
-<nav id="nav" style="display:none">
- <button data-tab="life"><b>📖</b>कहानी</button><button data-tab="world"><b>📰</b>खबरें</button>
- <button data-tab="people"><b>👥</b>लोग<span class="dot" id="dP" style="display:none"></span></button><button data-tab="chat"><b>💬</b>संदेश<span class="dot" id="dC" style="display:none"></span></button>
-</nav>
+<!-- nav removed: chat via side 💬 near mic -->
 <div id="call"></div><div id="rot"><div class="ic">📱</div>फ़ोन को आड़ा (landscape) घुमाएँ 🔄<small>अर्थ आड़े फ़ोन पर सबसे अच्छा चलता है</small></div>
 <audio id="remote" autoplay playsinline></audio>
 <script>
@@ -166,9 +163,9 @@ function connect(){
 }
 setInterval(function(){S({t:'ping'})},20000);
 function on(m){
- if(m.t==='auth'){TOK=m.token;try{localStorage.setItem('zt',TOK)}catch(e){}ICE=m.ice||ICE;$('nav').style.display='flex';try{var ak=localStorage.getItem('zadmin');if(ak)S({t:'admin',key:ak})}catch(e){}}
+ if(m.t==='auth'){TOK=m.token;try{localStorage.setItem('zt',TOK)}catch(e){}ICE=m.ice||ICE;/*nav removed*/;try{var ak=localStorage.getItem('zadmin');if(ak)S({t:'admin',key:ak})}catch(e){}}
  else if(m.t==='auth_fail'){TOK=null;try{localStorage.removeItem('zt')}catch(e){}signup()}
- else if(m.t==='me'){var firstMe=!ME,wasAlive=ME&&ME.state==='alive';ME=m;if(wasAlive&&m.state==='dead'){tab='life';DRAWER=true}setPanel(firstMe?false:DRAWER);lastMeAt=Date.now();var n=(m.friendReq.length+m.proposals.length);$('dP').style.display=n?'block':'none';$('dP').textContent=n;if(DRAWER&&(tab==='life'||(tab==='people'&&!viewP)))render();else renderStats()}
+ else if(m.t==='me'){var firstMe=!ME,wasAlive=ME&&ME.state==='alive';ME=m;if(wasAlive&&m.state==='dead'){tab='life';DRAWER=true}setPanel(firstMe?false:DRAWER);lastMeAt=Date.now();var n=(m.friendReq.length+m.proposals.length);if(n)toast('🔔 '+n+' अनुरोध — 💬 से देखो');if(DRAWER&&(tab==='life'||(tab==='people'&&!viewP)))render();else renderStats()}
  else if(m.t==='world'){W=m.w;if(tab==='world')render();renderStats()}
  else if(m.t==='tick'){W.day=m.day;W.year=m.year;W.active=m.active;W.births=m.births;W.deaths=m.deaths;renderStats();if(tab==='world'){var x=$('wclock');if(x)x.innerHTML=clockHtml()}}
  else if(m.t==='feed'){if(window.onFeed)window.onFeed(m.item);W.feed.unshift(m.item);W.feed.length=Math.min(W.feed.length,40);if(DRAWER&&tab==='world')render();else if(m.item.kind!=='preg')toast(m.item.text)}
@@ -201,8 +198,8 @@ function on(m){
  else if(m.t==='rtc')rtc(m);
  else if(m.t==='poses'){if(window.onPoses)window.onPoses(m.list)}
 }
-function dots(){var n=0;for(var k in unread)n+=unread[k];$('dC').style.display=n?'block':'none';$('dC').textContent=n}
-function signup(){ME=null;$('nav').style.display='none';$('stats').style.display='none';setPanel(true);
+function dots(){var n=0;for(var k in unread)n+=unread[k];var b=document.getElementById('chatB');if(b){b.style.boxShadow=n?'0 0 0 3px #ff5b7a,0 4px 14px rgba(0,0,0,.35)':'0 4px 14px rgba(0,0,0,.35)';b.title=n?('💬 '+n+' नए'):'संदेश / ज़ोया'}}
+function signup(){ME=null;/*nav removed*/;$('stats').style.display='none';setPanel(true);
  $('app').innerHTML='<div style="text-align:center;margin-top:10px"><div class="logo" style="font-size:64px">अर्थ</div><p class="small">खुली दुनिया वाला 3D शहर</p><button id="play" class="btn" style="text-align:center;font-size:30px;padding:16px 46px;border-radius:40px;margin:8px auto;display:block">▶ खेलो</button><button id="mkc" class="btn alt" style="text-align:center;margin:6px auto;display:block">🧍 अपना कैरेक्टर बनाओ</button></div><div class="card" id="cform" style="display:none"><h2>तुम्हारा नाम?</h2><input id="nm" maxlength="20" placeholder="नाम लिखो"><h2 style="margin-top:14px">लिंग</h2><div class="g3"><button class="btn alt" data-g="m">👦 लड़का</button><button class="btn alt" data-g="f">👧 लड़की</button><button class="btn alt sel" data-g="r">🎲 कोई भी</button></div><p class="small">✨ साइन अप करते ही तुम्हारी ज़िंदगी शुरू — शहर में घूमो, कमाओ, दोस्त बनाओ, गाड़ी चलाओ!</p><button class="btn c" id="go">गर्भ में आओ 🤰</button></div>';
  document.querySelectorAll('[data-g]').forEach(function(b){b.onclick=function(){document.querySelectorAll('[data-g]').forEach(function(x){x.classList.remove('sel')});b.classList.add('sel');gsel=b.dataset.g}});
  $('go').onclick=function(){var b=this,n=$('nm').value.trim();if(!n)return toast('नाम लिखो');if(b.disabled)return;b.disabled=true;setTimeout(function(){b.disabled=false},4000);S({t:'signup',name:n,g:gsel,look:window.__look||'normal'})};
@@ -218,7 +215,7 @@ function renderStats(){var st=$('stats');if(!ME){st.style.display='none';return}
  st.innerHTML=top+'<div class="srow"><span>⭐ लेवल '+(ME.lvl||1)+' · '+(ME.xp||0)+' XP</span><span'+(L.money<0?' style="color:#ff8a8a"':'')+'>💰 ₹'+fmt(L.money)+'</span></div>'+bar('❤️ सेहत',L.h,L.h<30?'#e74c3c':'#2ecc71')+bar('😊 खुशी',L.j,'#5b9cff')+bar('🤝 रिश्ते',L.r,'#c86bfa')+'<div class="st">📚 पढ़ाई <b>'+(L.study||0)+'</b></div>';if(window.GF&&GF.list){var sel='<div class="srow"><span>💍 पत्नी</span><select id="gfsel">'+GF.list.map(function(x){return '<option value="'+x.id+'"'+(x.id===GF.id?' selected':'')+'>'+esc(x.name)+'</option>'}).join('')+'</select></div>';st.insertAdjacentHTML('beforeend',sel);$('gfsel').onchange=function(){S({t:'gfset',id:this.value})}}}
 function fxHtml(d){if(!d)return '';var a=[];if(d[0])a.push('<span class="'+(d[0]>0?'p':'n')+'">'+(d[0]>0?'+':'-')+'₹'+fmt(Math.abs(d[0]))+'</span>');var n=['','सेहत','खुशी','रिश्ते'];for(var i=1;i<4;i++)if(d[i])a.push('<span class="'+(d[i]>0?'p':'n')+'">'+(d[i]>0?'+':'')+d[i]+' '+n[i]+'</span>');return a.length?'<div class="fx">'+a.join('')+'</div>':''}
 function render(){if(!ME)return;viewP=false;renderStats();clearInterval(waitT);
- document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',DRAWER&&b.dataset.tab===tab)});
+ 
  ({life:rLife,world:rWorld,people:rPeople,chat:rChat})[tab]()}
 function rLife(){var h='';
  if(ME.state==='preg'){var p=ME.preg,skew=Date.now()-p.now,tot=p.end-p.start;
@@ -269,7 +266,7 @@ function rChat(){
  var sendm=function(){var t=$('ci').value.trim();if(!t)return;S({t:'msg',to:chatWith,text:t});$('ci').value=''};$('cs').onclick=sendm;$('ci').onkeydown=function(e){if(e.key==='Enter')sendm()};drawChat()}
 function drawChat(){var c=$('cl');if(!c)return;c.innerHTML=(HIST[chatWith]||[]).map(function(m){return '<div class="bub'+(m.from===ME.id?' me':'')+'">'+esc(m.text)+'</div>'}).join('');c.scrollTop=c.scrollHeight}
 $('pcb').onclick=function(){setPanel(false);render()};
-document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){if(DRAWER&&tab===b.dataset.tab){setPanel(false);render();return}tab=b.dataset.tab;if(tab!=='chat')chatWith=null;setPanel(true);render()}});
+window.openChatPanel=function(){tab='chat';setPanel(true);render()};window.openPeoplePanel=function(){tab='people';setPanel(true);render()};
 
 /* ---------- WebRTC voice calls (WS signaling) ---------- */
 var C=null; // {peer,name,pc,stream,state,pending:[]}
@@ -330,7 +327,7 @@ if(matchMedia('(pointer:coarse)').matches){document.addEventListener('pointerdow
 /* tiny service worker */
 if('serviceWorker' in navigator){window.addEventListener('load',function(){
   navigator.serviceWorker.getRegistrations().then(function(rs){rs.forEach(function(r){/* keep but update */})});
-  navigator.serviceWorker.register('/sw.js?v=eecaeadv2',{updateViaCache:'none'}).then(function(reg){try{reg.update()}catch(e){}
+  navigator.serviceWorker.register('/sw.js?v=70d2a2av3',{updateViaCache:'none'}).then(function(reg){try{reg.update()}catch(e){}
    if(reg.waiting)reg.waiting.postMessage('SKIP_WAITING');
    navigator.serviceWorker.addEventListener('controllerchange',function(){/* soft hint */});
   }).catch(function(){});
@@ -339,8 +336,8 @@ if('serviceWorker' in navigator){window.addEventListener('load',function(){
 });}
 (function(){var b=document.getElementById('qb'),m={auto:'⚙️ ऑटो',lo:'⚙️ हल्का',mid:'⚙️ मध्यम',hi:'⚙️ HD',ultra:'⚙️ अल्ट्रा'},n={auto:'lo',lo:'mid',mid:'hi',hi:'ultra',ultra:'auto'},c='auto';try{c=localStorage.getItem('zq')||'auto'}catch(e){}if(!m[c])c='auto';b.textContent=m[c];b.onclick=function(){c=n[c];try{localStorage.setItem('zq',c);localStorage.removeItem('zqa')}catch(e){}toast('क्वालिटी: '+m[c]+' — पेज फिर से लोड हो रहा है');setTimeout(function(){location.reload()},600)}})();
 document.getElementById('lookb').onclick=function(){if(window.openLookPicker&&ME)window.openLookPicker(ME.look||'normal',function(k){S({t:'setLook',look:k})})};
-</script><script src="version.js?v=eecaeadv2"></script><script src="town.js?v=eecaeadv2"></script><script src="audio.js?v=eecaeadv2"></script><script src="voice.js?v=eecaeadv2"></script><script src="speak.js?v=eecaeadv2"></script><div id="dl" style="position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:30;padding:3px 12px;border-radius:12px;background:rgba(20,22,34,.7);color:#fff;font-size:12px;pointer-events:none;display:none"></div>
+</script><script src="version.js?v=70d2a2av3"></script><script src="town.js?v=70d2a2av3"></script><script src="audio.js?v=70d2a2av3"></script><script src="voice.js?v=70d2a2av3"></script><script src="speak.js?v=70d2a2av3"></script><div id="dl" style="position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:30;padding:3px 12px;border-radius:12px;background:rgba(20,22,34,.7);color:#fff;font-size:12px;pointer-events:none;display:none"></div>
 <script>window.onDistrictProgress=function(f){var e=document.getElementById('dl');e.style.display=f>=1?'none':'block';e.textContent='🏙️ शहर की डिटेल लोड हो रही है… '+Math.round(f*100)+'%'};</script>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/jsm/"}}</script>
-<script type="module" src="game3d.js?v=eecaeadv2"></script>
+<script type="module" src="game3d.js?v=70d2a2av3"></script>
 </body></html>
