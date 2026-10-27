@@ -307,7 +307,13 @@ connect();
  window.onLoadProgress=function(f){$('lpb').style.width=Math.max(5,Math.round(f*100))+'%';$('lpt').textContent=f>=1?'तैयार!':'लोड हो रहा है… '+Math.round(f*100)+'%';if(f>=1)setTimeout(fin,Math.max(300,900-(Date.now()-t0)))};
  setTimeout(fin,20000)})();
 document.addEventListener('pointerdown',function(){if(window.SND)SND.init()},{passive:true});
-addEventListener('load',function(){var b=$('muteB');function u(){b.textContent=SND.muted()?'🔇':'🔊'}u();b.onclick=function(){SND.init();SND.setMuted(!SND.muted());try{if(window.speechSynthesis)speechSynthesis.cancel()}catch(e){}u()}});
+addEventListener('load',function(){var b=$('muteB');function u(){b.textContent=SND.muted()?'🔇':'🔊'}u();b.onclick=function(){SND.init();try{window.SPEAK&&SPEAK.unlock()}catch(e){}SND.setMuted(!SND.muted());try{if(window.speechSynthesis)speechSynthesis.cancel()}catch(e){}u()};
+ var tb=document.createElement('button');tb.id='voiceTest';tb.className='ctl';tb.textContent='🔊 आवाज़ टेस्ट';tb.title='आवाज़ टेस्ट';
+ tb.style.cssText='position:fixed;right:8px;top:258px;min-height:36px;padding:4px 10px;border:none;border-radius:18px;background:rgba(255,255,255,.88);color:#3b3f9e;font:inherit;font-weight:700;font-size:12px;z-index:5';
+ document.body.appendChild(tb);
+ tb.onclick=function(){SND.init();try{if(SND.muted()){SND.setMuted(false);u()}window.SPEAK&&SPEAK.unlock();(window.SPEAK?SPEAK.test():Promise.resolve()).then(function(ok){toast(ok!==false?'🔊 आवाज़ ठीक है — अगर न सुनाई दे तो फ़ोन का Silent Switch चेक करो':'⚠️ आवाज़ नहीं चली — Silent Switch / वॉल्यूम चेक करो')})}catch(e){toast('⚠️ आवाज़ टेस्ट फेल')}};
+ // landscape safe position
+ try{var mq=matchMedia('(orientation:landscape)');function pos(){tb.style.top=mq.matches?'calc(var(--t,8px) + 110px)':'258px';tb.style.right=mq.matches?'calc(var(--r,8px) + 100px)':'8px'}pos();mq.addEventListener&&mq.addEventListener('change',pos)}catch(e){}});
 function isStandalone(){try{return !!(window.matchMedia&&window.matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches)||!!window.navigator.standalone}catch(e){return !!window.navigator.standalone}}
 function lockO(){try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){}}
 function goFullscreen(){try{var d=document.documentElement;var req=d.requestFullscreen||d.webkitRequestFullscreen||d.webkitRequestFullScreen||d.msRequestFullscreen;if(!document.fullscreenElement&&!document.webkitFullscreenElement&&req){var pr=req.call(d,{navigationUI:'hide'});if(pr&&pr.then)pr.then(lockO).catch(function(){lockO()});else lockO()}else lockO()}catch(e){lockO()}}
@@ -323,7 +329,7 @@ if(matchMedia('(pointer:coarse)').matches){document.addEventListener('pointerdow
 if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})});}
 (function(){var b=document.getElementById('qb'),m={auto:'⚙️ ऑटो',lo:'⚙️ हल्का',mid:'⚙️ मध्यम',hi:'⚙️ HD',ultra:'⚙️ अल्ट्रा'},n={auto:'lo',lo:'mid',mid:'hi',hi:'ultra',ultra:'auto'},c='auto';try{c=localStorage.getItem('zq')||'auto'}catch(e){}if(!m[c])c='auto';b.textContent=m[c];b.onclick=function(){c=n[c];try{localStorage.setItem('zq',c);localStorage.removeItem('zqa')}catch(e){}toast('क्वालिटी: '+m[c]+' — पेज फिर से लोड हो रहा है');setTimeout(function(){location.reload()},600)}})();
 document.getElementById('lookb').onclick=function(){if(window.openLookPicker&&ME)window.openLookPicker(ME.look||'normal',function(k){S({t:'setLook',look:k})})};
-</script><script src="town.js"></script><script src="audio.js"></script><script src="voice.js"></script><div id="dl" style="position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:30;padding:3px 12px;border-radius:12px;background:rgba(20,22,34,.7);color:#fff;font-size:12px;pointer-events:none;display:none"></div>
+</script><script src="town.js"></script><script src="audio.js"></script><script src="voice.js"></script><script src="speak.js"></script><div id="dl" style="position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:30;padding:3px 12px;border-radius:12px;background:rgba(20,22,34,.7);color:#fff;font-size:12px;pointer-events:none;display:none"></div>
 <script>window.onDistrictProgress=function(f){var e=document.getElementById('dl');e.style.display=f>=1?'none':'block';e.textContent='🏙️ शहर की डिटेल लोड हो रही है… '+Math.round(f*100)+'%'};</script>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/jsm/"}}</script>
 <script type="module" src="game3d.js"></script>

@@ -423,6 +423,8 @@ function wifeChat(p,m){if(!p.admin)return err(p,'👑 सिर्फ माल�
 
 // ---------- AI dialogue (LLM with scripted fallback) ----------
 const LLM=require('./llm.js')(env);LLM.CMDS=require('./llm.js').CMDS;
+const TTS=require('./tts.js')(env);
+
 const DEFLECT=['ऐसी बातें नहीं, दोस्त 🙏 कुछ और पूछो — चाय पिओगे?','माफ़ करना, इस पर बात नहीं होगी। शहर के बारे में पूछो!','अरे, तमीज़ से बात करो 🙂 कोई काम हो तो बताओ।'];
 const PH=t=>t<.25?'सुबह':t<.5?'दोपहर':t<.75?'शाम':'रात';
 async function say(p,m){if(p.state!=='alive'||!p.life)return;const b=npcOf(p,m.id);if(!b)return err(p,'पास जाकर बात करो');const R=ROLES[b.role];const text=clean(m.text,200);
@@ -549,7 +551,18 @@ function keyOk(q){const K=String(env.ADMIN_KEY||''),k=String(q.get('x-admin-key'
 app.post('/admin/owner',express.json({limit:'2kb'}),(q,r)=>{if(!keyOk(q))return r.status(403).json({ok:false});const ps=Object.values(db.players).filter(p=>p.name===String(q.body.name||''));ps.forEach(grantOwner);r.json({ok:true,granted:ps.length})});
 app.post('/admin/delete',express.json({limit:'2kb'}),(q,r)=>{if(!keyOk(q))return r.status(403).json({ok:false});const ps=Object.values(db.players).filter(p=>p.name===String(q.body.name||''));
  for(const p of ps){const ws=socks.get(p.id);if(ws)try{ws.close()}catch(e){}socks.delete(p.id);POS.delete(p.id);for(const o of Object.values(db.players)){o.friends=(o.friends||[]).filter(x=>x!==p.id);o.friendReq=(o.friendReq||[]).filter(x=>x!==p.id);o.proposals=(o.proposals||[]).filter(x=>x!==p.id);if(o.spouse===p.id)o.spouse=null}delete db.players[p.id]}mark();pushPlayers();r.json({ok:true,deleted:ps.length})});
-app.get('/health',(q,r)=>r.json({ok:true,players:Object.keys(db.players).length,active:socks.size}));
+app.get('/health',(q,r)=>r.json({ok:true,players:Object.keys(db.players).length,active:socks.size,tts:!!TTS.enabled}));
+app.post('/api/tts',express.json({limit:'2kb'}),async(q,r)=>{
+  try{const text=String(q.body&&q.body.text||'').slice(0,160);const female=!!(q.body&&q.body.female);
+   const tok=String(q.body&&q.body.token||q.get('x-token')||'');let pid='anon';
+   if(tok){const p=Object.values(db.players).find(x=>x.token===tok);if(p)pid=p.id}
+   if(!TTS.enabled)return r.status(503).json({ok:false,err:'tts off'});
+   if(!text)return r.status(400).json({ok:false});
+   if(!TTS.allow(pid))return r.status(429).json({ok:false,err:'rate'});
+   const out=await TTS.synth(text,{female});if(!out)return r.status(502).json({ok:false,err:'synth'});
+   r.set('Cache-Control','private, max-age=120');r.set('X-TTS-Src',out.src||'');r.type(out.mime||'audio/wav');r.send(out.buf||out.wav)}
+  catch(e){r.status(500).json({ok:false})}});
+
 const server=http.createServer(app);
 const wss=new WebSocketServer({server,maxPayload:32*1024});
 function detach(ws,p){ // drop p's socket entry only if it is still this ws; online/activeMs follow
