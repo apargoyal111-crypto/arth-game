@@ -1,0 +1,17 @@
+'use strict';
+const V=require('../public/voice.js');
+let pass=0,fail=0;const ok=(c,m)=>{c?pass++:fail++;console.log(c?'  ✔':'  ✘',m)};
+console.log('Voice helper unit tests');
+ok(typeof V.pickTarget==='function','exports pickTarget');
+ok(V.cleanTranscript('  नमस्ते   ज़ोया  ')==='नमस्ते ज़ोया','cleanTranscript collapses spaces');
+ok(V.isOwnerSlash('/time raat')&&!V.isOwnerSlash('साथ चलो'),'owner slash detect');
+const npcs=[{id:'a',role:'chai',x:0,z:0},{id:'w',role:'friend',x:10,z:0},{id:'b',role:'shop',x:3,z:0}];
+ok(V.pickTarget(npcs,{x:0,z:0,gfId:null})==='a','nearest NPC when no wife');
+ok(V.pickTarget(npcs,{x:0,z:0,gfId:'w'})==='w','prefer wife within 24m even if farther');
+ok(V.pickTarget([{id:'a',role:'chai',x:0,z:0}],{x:0,z:0,gfId:'missing'})==='a','no wife id -> nearest');
+ok(V.pickTarget(npcs,{x:0,z:0,dlgId:'b',gfId:'w'})==='b','open dialog wins');
+ok(V.pickTarget(npcs,{x:100,z:0,gfId:'w'})===null,'nobody in range');
+ok(V.voicePitch('ज़ोया',true)>1&&V.voicePitch('राम',false)<1.05,'pitch female>1 male~1');
+ok(V.voiceRate('x')>=.92&&V.voiceRate('x')<=1.12,'rate in band');
+console.log(`RESULT: ${pass} passed, ${fail} failed`);
+process.exit(fail?1:0);

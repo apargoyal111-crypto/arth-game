@@ -176,6 +176,8 @@ function on(m){
  else if(m.t==='xp'){if(window.ME){ME.xp=m.xp;ME.lvl=m.lvl}if(window.toast&&m.n)toast('✨ +'+m.n+' XP')}
  else if(m.t==='cmdok'){if(window.onCmdOk)window.onCmdOk(m)}
  else if(m.t==='gf'){if(window.onGf)window.onGf(m)}
+ else if(m.t==='wchat'){if(window.onWchat)window.onWchat(m)}
+ else if(m.t==='wifefx'){if(window.onWifefx)window.onWifefx(m)}
  else if(m.t==='owner'){if(window.onOwner)window.onOwner(m)}
  else if(m.t==='ko'){if(window.onKo)window.onKo(m)}
  else if(m.t==='jail'){if(window.onJail)window.onJail(m)}
@@ -202,7 +204,7 @@ function bar(l,v,c){return '<div class="st">'+l+' <b>'+v+'</b><div class="bar"><
 function renderStats(){var st=$('stats');if(!ME){st.style.display='none';return}st.style.display='block';
  var top='<div class="srow"><span>'+esc(ME.name)+'</span><span class="pill g">🟢 '+(W.active||0)+'</span></div>';
  var L=ME.life;if(!L){st.innerHTML=top+'<div>'+(ME.state==='preg'?'🤰 नया जन्म आने वाला है':'🕯️ जीवन समाप्त')+'</div>';return}
- st.innerHTML=top+'<div class="srow"><span>⭐ लेवल '+(ME.lvl||1)+' · '+(ME.xp||0)+' XP</span><span'+(L.money<0?' style="color:#ff8a8a"':'')+'>💰 ₹'+fmt(L.money)+'</span></div>'+bar('❤️ सेहत',L.h,L.h<30?'#e74c3c':'#2ecc71')+bar('😊 खुशी',L.j,'#5b9cff')+bar('🤝 रिश्ते',L.r,'#c86bfa')+'<div class="st">📚 पढ़ाई <b>'+(L.study||0)+'</b></div>';if(window.GF&&GF.list){var sel='<div class="srow"><span>❤️ गर्लफ्रेंड</span><select id="gfsel">'+GF.list.map(function(x){return '<option value="'+x.id+'"'+(x.id===GF.id?' selected':'')+'>'+esc(x.name)+'</option>'}).join('')+'</select></div>';st.insertAdjacentHTML('beforeend',sel);$('gfsel').onchange=function(){S({t:'gfset',id:this.value})}}}
+ st.innerHTML=top+'<div class="srow"><span>⭐ लेवल '+(ME.lvl||1)+' · '+(ME.xp||0)+' XP</span><span'+(L.money<0?' style="color:#ff8a8a"':'')+'>💰 ₹'+fmt(L.money)+'</span></div>'+bar('❤️ सेहत',L.h,L.h<30?'#e74c3c':'#2ecc71')+bar('😊 खुशी',L.j,'#5b9cff')+bar('🤝 रिश्ते',L.r,'#c86bfa')+'<div class="st">📚 पढ़ाई <b>'+(L.study||0)+'</b></div>';if(window.GF&&GF.list){var sel='<div class="srow"><span>💍 पत्नी</span><select id="gfsel">'+GF.list.map(function(x){return '<option value="'+x.id+'"'+(x.id===GF.id?' selected':'')+'>'+esc(x.name)+'</option>'}).join('')+'</select></div>';st.insertAdjacentHTML('beforeend',sel);$('gfsel').onchange=function(){S({t:'gfset',id:this.value})}}}
 function fxHtml(d){if(!d)return '';var a=[];if(d[0])a.push('<span class="'+(d[0]>0?'p':'n')+'">'+(d[0]>0?'+':'-')+'₹'+fmt(Math.abs(d[0]))+'</span>');var n=['','सेहत','खुशी','रिश्ते'];for(var i=1;i<4;i++)if(d[i])a.push('<span class="'+(d[i]>0?'p':'n')+'">'+(d[i]>0?'+':'')+d[i]+' '+n[i]+'</span>');return a.length?'<div class="fx">'+a.join('')+'</div>':''}
 function render(){if(!ME)return;viewP=false;renderStats();clearInterval(waitT);
  document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on',DRAWER&&b.dataset.tab===tab)});
@@ -294,13 +296,13 @@ connect();
  window.onLoadProgress=function(f){$('lpb').style.width=Math.max(5,Math.round(f*100))+'%';$('lpt').textContent=f>=1?'तैयार!':'लोड हो रहा है… '+Math.round(f*100)+'%';if(f>=1)setTimeout(fin,Math.max(300,900-(Date.now()-t0)))};
  setTimeout(fin,20000)})();
 document.addEventListener('pointerdown',function(){if(window.SND)SND.init()},{passive:true});
-addEventListener('load',function(){var b=$('muteB');function u(){b.textContent=SND.muted()?'🔇':'🔊'}u();b.onclick=function(){SND.init();SND.setMuted(!SND.muted());u()}});
+addEventListener('load',function(){var b=$('muteB');function u(){b.textContent=SND.muted()?'🔇':'🔊'}u();b.onclick=function(){SND.init();SND.setMuted(!SND.muted());try{if(window.speechSynthesis)speechSynthesis.cancel()}catch(e){}u()}});
 function goLandscape(){try{var d=document.documentElement;if(!document.fullscreenElement&&d.requestFullscreen){var pr=d.requestFullscreen({navigationUI:'hide'});if(pr&&pr.then)pr.then(lockO).catch(function(){})}else lockO()}catch(e){}}
 function lockO(){try{if(screen.orientation&&screen.orientation.lock)screen.orientation.lock('landscape').catch(function(){})}catch(e){}}
 if(matchMedia('(pointer:coarse)').matches){document.addEventListener('pointerdown',function(e){if(e.target.closest&&e.target.closest('input,textarea'))return;goLandscape()},{passive:true})}
 (function(){var b=document.getElementById('qb'),m={auto:'⚙️ ऑटो',lo:'⚙️ हल्का',mid:'⚙️ मध्यम',hi:'⚙️ HD',ultra:'⚙️ अल्ट्रा'},n={auto:'lo',lo:'mid',mid:'hi',hi:'ultra',ultra:'auto'},c='auto';try{c=localStorage.getItem('zq')||'auto'}catch(e){}if(!m[c])c='auto';b.textContent=m[c];b.onclick=function(){c=n[c];try{localStorage.setItem('zq',c);localStorage.removeItem('zqa')}catch(e){}toast('क्वालिटी: '+m[c]+' — पेज फिर से लोड हो रहा है');setTimeout(function(){location.reload()},600)}})();
 document.getElementById('lookb').onclick=function(){if(window.openLookPicker&&ME)window.openLookPicker(ME.look||'normal',function(k){S({t:'setLook',look:k})})};
-</script><script src="town.js"></script><script src="audio.js"></script><div id="dl" style="position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:30;padding:3px 12px;border-radius:12px;background:rgba(20,22,34,.7);color:#fff;font-size:12px;pointer-events:none;display:none"></div>
+</script><script src="town.js"></script><script src="audio.js"></script><script src="voice.js"></script><div id="dl" style="position:fixed;left:50%;bottom:6px;transform:translateX(-50%);z-index:30;padding:3px 12px;border-radius:12px;background:rgba(20,22,34,.7);color:#fff;font-size:12px;pointer-events:none;display:none"></div>
 <script>window.onDistrictProgress=function(f){var e=document.getElementById('dl');e.style.display=f>=1?'none':'block';e.textContent='🏙️ शहर की डिटेल लोड हो रही है… '+Math.round(f*100)+'%'};</script>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.js","three/addons/":"./vendor/jsm/"}}</script>
 <script type="module" src="game3d.js"></script>

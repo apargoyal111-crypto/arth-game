@@ -115,8 +115,13 @@ function socialBonus(p){const L=p.life;if(!L)return;const on=p.friends.filter(is
 const H={
  next(p){},
  ocmd(p,m){ownerCmd(p,String(m.text||'').slice(0,80))},
- gfcall(p){if(!p.admin)return err(p,'👑 सिर्फ मालिक');gfDefault(p);const b=ROLEB.find(x=>x.id===p.gf);if(b)execCmd(p,b,{act:'come'},'आ रही हूँ '+p.name+'! ❤️')},
+ gfcall(p){if(!p.admin)return err(p,'👑 सिर्फ मालिक');gfDefault(p);const b=ROLEB.find(x=>x.id===p.gf);if(b)execCmd(p,b,{act:'come'},'आ रही हूँ सुनिए जी! ❤️')},
  gfset(p,m){if(!p.admin)return;const b=ROLEB.find(x=>x.id===m.id&&x.g==='f');if(b){p.gf=b.id;mark();sendTo(p.id,{t:'gf',id:b.id,name:b.name})}},
+ gfhome(p){if(!p.admin)return err(p,'👑 सिर्फ मालिक');gfDefault(p);const b=ROLEB.find(x=>x.id===p.gf),a=POS.get(p.id);if(!b||!a)return;release(b);b.mode='hold';b.follow=p.id;b.cmdT=now();goTo(b,HM[0]+2,HM[1]+2);sendTo(p.id,{t:'cmdok',id:b.id,k:'home',name:b.name,text:'घर चलते हैं सुनिए जी 🏠'});sendTo(p.id,{t:'wifefx',k:'home',x:HM[0],z:HM[1]})},
+ wifego(p){if(!p.admin)return;const a=POS.get(p.id);if(!a)return;a.x=HM[0];a.z=HM[1]+3;sendTo(p.id,{t:'wifefx',k:'warp',x:HM[0],z:HM[1]+3});notif(p,'🏠 घर पहुँच गए')},
+ wife(p,m){wifeAct(p,m)},
+ wchat(p,m){wifeChat(p,m)},
+
  players(p){send(socks.get(p.id),{t:'players',list:playersList()})},
  say(p,m){say(p,m).then(r=>{if(r&&p.admin)send(socks.get(p.id),{t:'llmsrc',src:r.src,act:r.act})}).catch(e=>console.error('say',e.message))},
  lines(p){if(!p.admin)return;const f=[];for(const d of NPCDEF){if(d[2]!=='f')continue;const R=ROLES[d[0]];f.push(...(R.hi||[]),...(R.call||[]))}send(socks.get(p.id),{t:'lines',f})},
@@ -257,7 +262,7 @@ const ROLES={
  teacher:{e:'📚',t:'मास्टरजी',look:'saree',items:[['padho','📖 कुछ सिखाइए',0,{study:1}]],hi:['पढ़ाई कैसी चल रही है?','होमवर्क किया?'],call:['चलो बच्चों, क्लास का टाइम!']},
  doctor:{e:'🩺',t:'डॉक्टर साहब',look:'doctor',items:[['checkup','🩺 चेकअप ₹200',200,{h:5}]],hi:['कैसी तबीयत है?','पानी ज़्यादा पिया करो'],call:['अगला मरीज़!']},
  pujari:{e:'🛕',t:'पुजारी जी',look:'pujari',items:[['prasad','🙏 प्रसाद लीजिए',0,{j:3}]],hi:['जय श्री राम 🙏','आओ बेटा, आशीर्वाद लो'],call:['🔔 आरती का समय हो गया','ॐ नमः शिवाय 🙏']},
- friend:{e:'💖',t:'',look:'gf',items:[],hi:['अरे, तुम आ गए! आज कहाँ घूमने चलें?','पार्क की हवा आज बहुत अच्छी है 🙂','चाय पीने चलें? मुझे बाज़ार वाली चाय पसंद है।','शाम को मंदिर की आरती देखने चलोगे?'],call:['चलो ना, घूमने चलते हैं! 😄','आज मौसम कितना प्यारा है!']},
+ friend:{e:'💍',t:'पत्नी',look:'gf',items:[],hi:['सुनिए जी, आप आ गए! ❤️ आज कहाँ चलें?','जानू, चाय बना दूँ? बाज़ार वाली जैसी','घर पर इंतज़ार कर रही थी… अब साथ घूमते हैं','शाम को बीच पर बैठते हैं? सूरज डूबता है ना'],call:['सुनिए जी! 💍','जानू, इधर आइए 😊']},
  cricket:{e:'🏏',t:'',look:'shirt',items:[['cricket','🏏 क्रिकेट खेलें!',0,{h:2,j:3}]],hi:['आओ, एक ओवर खेलोगे?','आउट! हाहा 😂'],call:['चौका! 🏏','हाउज़ैट!! ☝️']},
  elder:{e:'👴',t:'दादाजी',look:'kurta',items:[['salah','💭 कोई सलाह दीजिए',0,{j:1,r:1}]],hi:['जीते रहो बेटा','हमारे ज़माने में…'],call:['सुबह की सैर सबसे अच्छी 🚶']},
  tourist:{e:'🏖️',t:'',look:'swim2',items:[['selfie','🤳 सेल्फ़ी लें?',0,{j:2}]],hi:['नमस्ते! आज समुंदर कितना नीला है ना 🌊','पानी बिल्कुल ठंडा है, मज़ा आ गया!','सूर्यास्त यहाँ से सबसे सुंदर दिखता है 🌅','आपने जेट-स्की ट्राय की? बहुत मज़ेदार है!','पैरासेलिंग से पूरा शहर दिखता है ✨','नारियल पानी पिया? वहाँ स्टॉल पर मिलता है 🥥','मैं दिल्ली से छुट्टियाँ मनाने आई हूँ','शाम को वॉकिंग स्ट्रीट चलेंगे, वहाँ बहुत रौनक होती है'],call:['लहरें देखो, कितनी ऊँची! 🌊','धूप बहुत अच्छी है आज ☀️','सनस्क्रीन लगाना मत भूलना!','यहाँ की रेत कितनी मुलायम है']},
@@ -281,7 +286,7 @@ const NPCDEF=[
  ['doctor','डॉ. वर्मा','m',48,[[0,1,[HO[0]-2,HO[1]-18],'post']]],
  ['pujari','पंडित जी','m',62,[[0,1,[TE[0]+1,TE[1]-15.5],'post']]],
  ['cricket','रोहित','m',22,[[.35,.75,[ST[0]-3,ST[1]-24],'cricket']]],['cricket','स्नेहा','f',21,[[.35,.75,[ST[0]+3,ST[1]-22],'cricket']]],['cricket','करण','m',24,[[.35,.75,[ST[0],ST[1]-30],'cricket']]],
- ['friend','ज़ोया','f',23,[[0,1,[PA[0]+4,PA[1]+2],'wander']]],
+ ['friend','ज़ोया (पत्नी)','f',23,[[0,1,[HM[0]+2,HM[1]+2],'post']]],
  ['elder','दादाजी','m',72,[[.2,.35,[PA[0]-10,PA[1]-4],'walk'],[.35,.7,[18,22],'bench'],[.7,.85,[TE[0]-4,TE[1]-6],'post']]],['elder','दादीजी','f',68,[[.2,.35,[PA[0]+10,PA[1]-4],'walk'],[.35,.7,[42,22],'bench']]],
  ['police','हवलदार सिंह','m',40,[[0,1,[THANA[0]+3,THANA[1]+22],'post']]],['police','सिपाही यादव','m',31,[[0,.5,[MK[0]-4,MK[1]+16.5],'post'],[.5,1,[-60+6.5,-30],'post']]],
  ['traffic','ट्रैफ़िक हवलदार','m',36,[[.25,.88,[4.5,4.5],'post']]],
@@ -296,6 +301,7 @@ function bfs(a,b){if(a===b)return[a];const prev=new Map([[a,-1]]),q=[a];while(q.
 for(const def of NPCDEF){const [role,name,g,age,sched]=def;const R=ROLES[role],i=BOTS.length,hm=T.NODES[(i*7)%T.NODES.length];
  BOTS.push({id:'npc'+i,role,name:R.e+' '+name+(R.t?' '+R.t:''),base:name,g,look:def[5]||R.look,age,x:sched[0][2][0],z:sched[0][2][1],ry:0,sched,home:[hm[0]+(i%2?5:-5),hm[1]+5],route:[],slot:-2,wait:0,sit:false,ch:true,sp:role==='cricket'||role==='volley'?2.2:1.4,hid:false,idleT:0})}
 const ROLEB=BOTS.filter(b=>b.role),POLICE=ROLEB.filter(b=>ROLES[b.role].police);
+for(const b of ROLEB){if(b.role==='friend'){b.home=[HM[0]+2,HM[1]+2];b.x=b.home[0];b.z=b.home[1];b.name='💍 ज़ोया (पत्नी)'}}
 function goTo(b,x,z){if(Math.hypot(b.x-x,b.z-z)<14){b.route=[[x,z]];b.sit=false;b.ch=true;return}const path=bfs(nearestNode(b.x,b.z),nearestNode(x,z)).map(n=>T.NODES[n]);b.route=path.concat([[x,z]]);b.sit=false;b.ch=true}
 function nearPlayer(x,z,r){for(const o of POS.values())if(Math.hypot(o.x-x,o.z-z)<r)return o;return null}
 function roleTick(dt){const ph=dayPhase(),t=now();
@@ -393,6 +399,28 @@ function ownerCmd(p,text){if(!p.admin)return err(p,'👑 यह सिर्फ 
  if(c==='gf'){const b=ROLEB.find(x=>x.g==='f'&&(x.id===arg||(x.base||'')===rest.join(' ')));if(!b)return err(p,'ऐसी NPC नहीं मिली');p.gf=b.id;mark();sendTo(p.id,{t:'gf',id:b.id,name:b.name});return ok('❤️ '+b.name)}
  return err(p,'कमांड: /time 18|subah|raat|auto · /weather saaf|baarish|kohra · /spawn · /callall · /home · /police on|off')}
 function gfDefault(p){if(!p.admin)return;if(!p.gf||!ROLEB.some(b=>b.id===p.gf)){const b=ROLEB.find(x=>x.role==='friend')||ROLEB.find(x=>x.g==='f'&&x.role!=='police'&&x.role!=='traffic');if(b)p.gf=b.id}}
+// ---------- wife affection, dates, private chat (owner-only, wholesome) ----------
+const WIFE_OK={kiss:['माथे पर किस 😘','गाल पर प्यार से 💋'],hug:['गले लग गई 🤗','आ जाओ जानू 🤗'],hand:['हाथ पकड़ लिया 🤝','साथ चलते हैं हाथ में हाथ'],beach:['बीच पर सूर्यास्त डेट 🌅','रेत पर साथ बैठे 🌊'],dinner:['डिनर डेट तैयार 🍽️','रेस्तराँ में टेबल लग गई']};
+function wifeBot(p){gfDefault(p);return ROLEB.find(x=>x.id===p.gf)}
+function wifeNear(p,b,r){const a=POS.get(p.id);return !!(a&&b&&!b.hid&&Math.hypot(a.x-b.x,a.z-b.z)<(r||8))}
+function wifeAct(p,m){if(!p.admin)return err(p,'👑 सिर्फ मालिक');const b=wifeBot(p);if(!b)return;const k=String(m.k||'');const t=now();p.cd=p.cd||{};
+ if(['kiss','hug','hand'].includes(k)){const a=POS.get(p.id);if(!a)return;const d=Math.hypot(a.x-b.x,a.z-b.z);if(d>28)return err(p,'पत्नी के पास जाओ');if(d>5){b.x=a.x+1;b.z=a.z+1;b.ch=true}if(p.cd.waff&&t<p.cd.waff)return err(p,'थोड़ा रुको');p.cd.waff=t+1800;
+  b.follow=p.id;b.mode=k==='hand'?'follow':'hold';b.cmdT=t;b.sit=false;b.ch=true;botFace(b,POS.get(p.id));
+  const ln=pickL(WIFE_OK[k]);bcast({t:'fx',k:k==='hand'?'wave':k==='hug'?'act':'wave',id:b.id});bcast({t:'fx',k:'talk',id:b.id});
+  sendTo(p.id,{t:'wifefx',k,id:b.id,text:ln});dlg(p,b,ln);botSay(b,ln);return}
+ if(k==='beach'||k==='dinner'){if(p.cd.wdate&&t<p.cd.wdate)return err(p,'थोड़ा रुको');p.cd.wdate=t+8000;
+  const dest=k==='beach'?[176,8]:(T.ZONES.find(z=>z.id==='mall')?[ -30,213]:[30,-10]);
+  b.follow=p.id;b.mode='hold';b.cmdT=t;goTo(b,dest[0],dest[1]);
+  const a=POS.get(p.id);if(a){a.x=dest[0]-2;a.z=dest[1];sendTo(p.id,{t:'wifefx',k:'warp',x:a.x,z:a.z})}
+  if(k==='beach'){b.sit=true;b.ch=true}const ln=pickL(WIFE_OK[k]);sendTo(p.id,{t:'wifefx',k,id:b.id,text:ln,x:dest[0],z:dest[1]});dlg(p,b,ln);botSay(b,ln);return}
+ return err(p,'अज्ञात पत्नी क्रिया')}
+function wifeChat(p,m){if(!p.admin)return err(p,'👑 सिर्फ मालिक');const b=wifeBot(p);if(!b)return;p.wchat=p.wchat||[];const text=clean(m.text,200);
+ if(!text)return sendTo(p.id,{t:'wchat',msgs:p.wchat.slice(-20),name:b.name});
+ p.wchat.push({from:'me',text,ts:now()});if(p.wchat.length>40)p.wchat.splice(0,p.wchat.length-40);
+ sendTo(p.id,{t:'wchat',msgs:p.wchat.slice(-20),name:b.name});
+ say(p,{id:b.id,text}).then(r=>{const reply=(r&&r.say)||pickL(['हाँ सुनिए जी ❤️','जानू, ठीक है']);p.wchat.push({from:'her',text:reply,ts:now()});if(p.wchat.length>40)p.wchat.splice(0,p.wchat.length-40);
+  sendTo(p.id,{t:'wchat',msgs:p.wchat.slice(-20),name:b.name})}).catch(()=>{})}
+
 // ---------- AI dialogue (LLM with scripted fallback) ----------
 const LLM=require('./llm.js')(env);LLM.CMDS=require('./llm.js').CMDS;
 const DEFLECT=['ऐसी बातें नहीं, दोस्त 🙏 कुछ और पूछो — चाय पिओगे?','माफ़ करना, इस पर बात नहीं होगी। शहर के बारे में पूछो!','अरे, तमीज़ से बात करो 🙂 कोई काम हो तो बताओ।'];
@@ -401,9 +429,9 @@ async function say(p,m){if(p.state!=='alive'||!p.life)return;const b=npcOf(p,m.i
  p.mem=p.mem||{};const mem=p.mem[b.id]||(p.mem[b.id]=[]);const z=T.ZONES.slice().sort((a,c)=>Math.hypot(a.x-b.x,a.z-b.z)-Math.hypot(c.x-b.x,c.z-b.z))[0];
  const P={name:b.base||b.name,role:b.role+(R.t?' ('+R.t+')':''),where:z?z.n:'शहर',time:PH(dayPhase()),player:p.name,dost:dost(p,b),mem:mem.join(' | '),items:(R.items||[]).map(i=>i[0]+'='+i[1]+' ₹'+i[2]).join(', '),job:!!R.job,mood:R.mood};
  if(text&&!LLM.bad(text)){const k=LLM.kw(text,T.ZONES);if(k){execCmd(p,b,k);mem.push(p.name+': '+text.slice(0,60));if(mem.length>4)mem.shift();return {src:'rule',act:k.act}}}
- if(isGf(p,b)){P.role+=' — '+p.name+' की प्यारी, वफ़ादार गर्लफ्रेंड (काल्पनिक वयस्क); '+p.name+' उसका रचयिता है (पहचान: मैरून हुडी और टैन टैक्टिकल वेस्ट वाला कमांडो लुक); हमेशा प्यार से नाम लेकर बात करती है; सिर्फ साफ़-सुथरा प्यार (हाथ पकड़ना, गले मिलना, गाल पर किस तक), कुछ भी अश्लील नहीं';P.dost=10}
+ if(isGf(p,b)){P.role+=' — '+p.name+' की प्यारी, वफ़ादार पत्नी (काल्पनिक वयस्क पत्नी); अक्सर "सुनिए जी" या "जानू" कहकर बुलाती है; हमेशा प्यार से बात करती है और उसके आदेश मानती है; सिर्फ साफ़-सुथरा प्यार (हाथ पकड़ना, गले मिलना, गाल/माथे पर किस), कुछ भी अश्लील/यौन नहीं';P.dost=10}
  P.zones=T.ZONES.map(z=>z.id).join(',');
- const r=await LLM.reply(p.id,P,text,{line:text?pickL(isGf(p,b)?['हाँ '+p.name+', बोलो ना? ❤️','तुम्हारे साथ हूँ, '+p.name+'!']:['हम्म, अच्छा! और बताओ?','हाँ जी, ज़रूर — कुछ और?','ठीक है, समझ गए 🙂']):pickL(R.hi||['हाँ जी, बोलो?']),deflect:pickL(DEFLECT)});
+ const r=await LLM.reply(p.id,P,text,{line:text?pickL(isGf(p,b)?['हाँ सुनिए जी, बोलिए ना? ❤️','जानू, आपके साथ हूँ!','ठीक है जानू, जैसा आप कहें']:['हम्म, अच्छा! और बताओ?','हाँ जी, ज़रूर — कुछ और?','ठीक है, समझ गए 🙂']):pickL(R.hi||['हाँ जी, बोलो?']),deflect:pickL(DEFLECT)});
  if(LLM.CMDS.includes(r.act)){execCmd(p,b,{act:r.act,to:r.to},r.say);mem.push(r.say.slice(0,60));if(mem.length>4)mem.shift();return r}
  const act=applyAct(p,b,r);mem.push((text?p.name+': '+text.slice(0,60)+' → ':'')+r.say.slice(0,60));if(mem.length>4)mem.shift();
  if(!act)dlg(p,b,r.say);bcast({t:'fx',k:'talk',id:b.id});return r}
@@ -414,12 +442,13 @@ function applyAct(p,b,r){const R=ROLES[b.role];p.npcf=p.npcf||{};
  if(r.act==='job'&&R.job&&!p.gig){dlg(p,b,r.say);onDlg(p,{id:b.id,k:'job'});return true}
  r.act='none';return false}
 // dialogue: tap-to-talk with reply chips
-function npcOf(p,id){const b=ROLEB.find(x=>x.id===id),a=POS.get(p.id);if(!b||!a||b.hid||Math.hypot(a.x-b.x,a.z-b.z)>4.5)return null;return b}
+function npcOf(p,id){const b=ROLEB.find(x=>x.id===id),a=POS.get(p.id);if(!b||!a||b.hid)return null;const d=Math.hypot(a.x-b.x,a.z-b.z);const lim=isGf(p,b)?24:(b.follow===p.id?12:4.5);if(d>lim)return null;return b}
 function dost(p,b){p.npcf=p.npcf||{};return p.npcf[b.id]||0}
 function chips(p,b){const R=ROLES[b.role],c=[];const lv=dost(p,b);
  for(const it of R.items||[]){const pr=it[2]&&lv>=5?Math.max(0,it[2]-5):it[2];c.push({k:'buy:'+it[0],l:pr!==it[2]?it[1].replace('₹'+it[2],'₹'+pr+' (दोस्त-दाम)'):it[1]})}
  if(R.job&&!p.gig)c.push({k:'job',l:'💼 कोई काम है?'});
  if(R.police){c.push({k:'dir',l:'🗺️ रास्ता बताइए'},{k:'complain',l:'📝 शिकायत दर्ज करें'});if(p.wanted)c.push({k:'surrender',l:'🙇 सरेंडर करूँ'})}
+ if(isGf(p,b)){c.push({k:'wkiss',l:'💋 गाल/माथा'},{k:'whug',l:'🤗 गले लगो'},{k:'whand',l:'🤝 हाथ पकड़ो'},{k:'wbeach',l:'🌅 बीच डेट'},{k:'wdinner',l:'🍽️ डिनर'});}
  c.push({k:'bye',l:'👋 फिर मिलेंगे'});return c}
 function dlg(p,b,text,ch){const lv=Math.min(10,dost(p,b));send(socks.get(p.id),{t:'dlg',id:b.id,name:b.name,role:b.role,text,dost:lv,chips:ch||chips(p,b)})}
 function npcTalk(p,b){const a=POS.get(p.id);botFace(b,a);p.npcf=p.npcf||{};const n=(p.npcf[b.id]||0);const t=now();p.npct=p.npct||{};
@@ -431,6 +460,7 @@ const DIRS=['उत्तर','उत्तर-पूर्व','पूर्व
 function dirText(a,z){const dx=z.x-a.x,dz=z.z-a.z,d=Math.round(Math.hypot(dx,dz)),ang=Math.atan2(dx,-dz);const i=((Math.round(ang/(Math.PI/4))%8)+8)%8;return z.n+' यहाँ से '+DIRS[i]+' में करीब '+d+' मीटर है'}
 function onDlg(p,m){if(p.state!=='alive'||!p.life||p.jail)return;const b=npcOf(p,m.id);if(!b)return err(p,'पास जाकर बात करो');const k=String(m.k||''),R=ROLES[b.role],L=p.life,t=now();p.cd=p.cd||{};
  if(k==='bye'){botSay(b,pickL(['फिर आना! 🙏','अच्छा जी, राम राम','ठीक है, ध्यान रखना']));return send(socks.get(p.id),{t:'dlg',id:b.id,close:1})}
+ if(isGf(p,b)&&k.startsWith('w')){const map={wkiss:'kiss',whug:'hug',whand:'hand',wbeach:'beach',wdinner:'dinner'};if(map[k])return wifeAct(p,{k:map[k]})}
  if(k.startsWith('buy:')){const it=(R.items||[]).find(x=>'buy:'+x[0]===k);if(!it)return;if(!p.admin&&p.cd.buy&&t<p.cd.buy)return err(p,'थोड़ा रुको — '+Math.ceil((p.cd.buy-t)/1000)+'s');
   const pr=it[2]&&dost(p,b)>=5?Math.max(0,it[2]-5):it[2];if(pr&&L.money<pr&&!p.admin)return dlg(p,b,'पैसे कम हैं भाई 😅 पहले कुछ कमा लो');p.cd.buy=t+Math.max(800,ACT_CD/2);
   const g=[];if(pr){L.money-=pr;g.push('−₹'+pr)}for(const [f,v] of Object.entries(it[3])){if(f==='study'){L.study=(L.study||0)+v;g.push('+1 पढ़ाई 📚')}else{L[f]=E.cl(L[f]+v);g.push('+'+v+' '+({h:'सेहत',j:'खुशी',r:'रिश्ते'})[f])}}

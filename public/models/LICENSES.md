@@ -33,3 +33,8 @@ Earlier Mixamo-derived models (soldier/michelle/Xbot) were never committed to th
 
 ## Animations
 - `anim_m.json`, `anim_f.json`: retargeted from **Universal Animation Library (Standard)** by Quaternius — CC0 1.0 — https://quaternius.itch.io/universal-animation-library
+
+## Round 6 — ज़ोया (पत्नी) look polish
+- Still uses `woman.glb` (Innerscene Harper / MakeHuman CC0) so Quaternius UAL mocap retargeting (`anim_f.json`) keeps working. A full Quaternius Modular Women swap would break our bone map.
+- Runtime polish for the `gf` look: warmer Indian skin tone, glam sheen, blue cargo jeans + red check shirt, wedding ring + mangalsutra accessories (procedural meshes), dark ponytail. Modest everyday outfit (no nudity).
+- Design reference: `design/gf-reference.png` (fictional character sheet).

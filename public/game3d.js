@@ -420,7 +420,7 @@ const LOOKS={
  swim2:{n:'बीच — वन-पीस (नीला)',d:'सिर्फ बीच पर',model:'f',tint:'#1e88e5',amt:.9,reg:3,beach:1},
  swim3:{n:'बीच — बिकिनी (पीला प्रिंट)',d:'सिर्फ बीच पर',model:'f',tint:'#ffca28',amt:.9,pat:3,reg:2,beach:1},
  swimM:{n:'बीच — स्विम शॉर्ट्स',d:'सिर्फ बीच पर',model:'m',tint:'#00897b',amt:.9,reg:4,beach:1},
- gf:{n:'ज़ोया — रेड चेक',d:'लाल-काली चेक शर्ट, कार्गो जींस, ऊँची पोनीटेल, बैकपैक',model:'f',outfit:['#9a1622','#6d8db3',2],reg:1,t2:'#5f86b8',hairC:'#3a2416',acc:'gf'},
+ gf:{n:'ज़ोया (पत्नी)',d:'लाल-काली चेक शर्ट, सफ़ेद टॉप, नीली कार्गो जींस, पोनीटेल, बैकपैक, मंगलसूत्र',model:'f',outfit:['#9a1622','#4a7ab0',2],reg:1,t2:'#5a84b8',hairC:'#2a1a12',acc:'gf',glam:1,skin:[1.05,.92,.82],sheen:'#ffe0c8'},
  h1:{n:'रिया',d:'लाल-सुनहरी डिज़ाइनर साड़ी',model:'f',tint:'#b3122e',amt:.9,glam:1,sheen:'#ffcf6b',pat:3},
  h2:{n:'काव्या',d:'गुलाबी ब्राइडल लहंगा',model:'f',tint:'#e0457b',amt:.9,glam:1,sheen:'#ffd9a0',pat:3},
  h3:{n:'तारा',d:'मिडनाइट-ब्लू गाउन',model:'f',tint:'#1b2a6b',amt:.9,glam:1,sheen:'#9fb6ff'},
@@ -549,7 +549,15 @@ function gfAcc(root,obj){const V=THREE.Vector3;root.updateMatrixWorld(true);cons
  at('pelvis',new THREE.CylinderGeometry(.168,.165,.035,18,1,true),blk,new V(0,.06,0));
  const tr=obj.getObjectByName('thigh_r');if(tr){const p=tr.getWorldPosition(new V());root.worldToLocal(p);const s=Math.sign(p.x)||-1;at('thigh_r',new THREE.CylinderGeometry(.088,.085,.035,14,1,true),blk,new V(0,-.2,0));at('thigh_r',new THREE.BoxGeometry(.04,.16,.09),blk,new V(s*.09,-.22,0))}
  at('neck_01',new THREE.TorusGeometry(.065,.004,4,16),blk,new V(0,-.03,.02),1.35);at('neck_01',new THREE.BoxGeometry(.022,.032,.006),new THREE.MeshStandardMaterial({color:'#888',metalness:.8,roughness:.3}),new V(0,-.1,.1));
- for(const sd of ['l','r'])at('hand_'+sd,new THREE.CylinderGeometry(.034,.034,.05,10),blk,new V(0,0,0),0,'lowerarm_'+sd)}
+ for(const sd of ['l','r'])at('hand_'+sd,new THREE.CylinderGeometry(.034,.034,.05,10),blk,new V(0,0,0),0,'lowerarm_'+sd);
+ // wedding ring + mangalsutra (wholesome wife look)
+ const gold=new THREE.MeshStandardMaterial({color:'#d4af37',metalness:.9,roughness:.28});
+ at('hand_l',new THREE.TorusGeometry(.016,.0032,6,14),gold,new V(0,.015,.012),1.15);
+ const bead=new THREE.MeshStandardMaterial({color:'#1a120e',roughness:.55});
+ at('neck_01',new THREE.TorusGeometry(.072,.006,5,22),bead,new V(0,-.045,.015),1.35);
+ at('neck_01',new THREE.SphereGeometry(.014,8,6),gold,new V(0,-.125,.105));
+ at('neck_01',new THREE.SphereGeometry(.01,6,5),gold,new V(-.018,-.12,.1));
+ at('neck_01',new THREE.SphereGeometry(.01,6,5),gold,new V(.018,-.12,.1))}
 
 function cmdAcc(root,obj){const V=THREE.Vector3;root.updateMatrixWorld(true);const M=c=>new THREE.MeshStandardMaterial({color:c,roughness:.75});const tan=M('#a88f63'),blk=M('#141414'),camo=M('#6d665a'),hairM=M('#2e1f16');
  const at=(bn,geo,mat,off,rx,rz)=>{const b=obj.getObjectByName(bn);if(!b)return;const p=b.getWorldPosition(new V());root.worldToLocal(p);const m=new THREE.Mesh(geo,mat);m.position.copy(p).add(off);if(rx)m.rotation.x=rx;if(rz)m.rotation.z=rz;m.castShadow=true;root.add(m);b.attach(m)};
@@ -562,7 +570,7 @@ function cmdAcc(root,obj){const V=THREE.Vector3;root.updateMatrixWorld(true);con
  at('pelvis',new THREE.CylinderGeometry(.19,.185,.05,18,1,true),blk,new V(0,.06,0));
  for(const s of ['l','r']){at('calf_'+s,new THREE.BoxGeometry(.11,.1,.06),blk,new V(0,.01,.07));at('hand_'+s,new THREE.SphereGeometry(.05,8,6),blk,new V(0,0,0));at('foot_'+s,new THREE.BoxGeometry(.12,.11,.27),M('#9c7f55'),new V(0,-.03,.05))}}
 // ---------- clip-driven animation (Quaternius UAL CC0 mocap retargeted to our rigs) ----------
-const ONE=new Set(['jab','cross','hit','hitH','wave','sitIn','sitOut','bat','yes','no','hook']);
+const ONE=new Set(['jab','cross','hit','hitH','wave','sitIn','sitOut','bat','yes','no','hook','talk']);
 const _nq=new THREE.Quaternion(),_nq2=new THREE.Quaternion(),_up=new THREE.Vector3(0,1,0);
 function playOne(u,n,cap){const a=u.act[n];if(!a)return;if(u.one&&u.one!==a)u.one.fadeOut(.1);const b=u.act[u.base];if(b)b.fadeOut(.12);a.enabled=true;a.reset().setEffectiveWeight(1).fadeIn(.1).play();u.one=a;u.oneEnd=performance.now()+Math.min(cap||9,a.getClip().duration-.15)*1000/(G.__animSlow||1)}
 function setBase(u,n){if(!u.act[n]||n===u.base)return;const o=u.act[u.base],a=u.act[n];a.enabled=true;a.reset().setEffectiveWeight(1);if(!u.one)a.fadeIn(.25);else a.setEffectiveWeight(0);a.play();if(o&&!u.one)o.fadeOut(.25);else if(o)o.stop();u.base=n}
@@ -604,7 +612,7 @@ const MN=WEAK?60:140,mPos=new Float32Array(MN*3);for(let i=0;i<MN;i++)mPos.set([
 const motes=new THREE.Points(mG,new THREE.PointsMaterial({color:'#fff2c4',size:.07,transparent:true,opacity:.5,depthWrite:false}));motes.frustumCulled=false;scene.add(motes);
 const SND=G.SND||{};const vib=ms=>{try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}};
 G.onGain=t=>{if(me){floatText(t,me);burst(P.x,1.6,P.z,/-/.test(t)&&!/\+/.test(t)?'#ff6b6b':'#ffd166',18,2);SND.act&&SND.act()}};
-G.onSay=m=>{const ch=charOf(m.id);if(!ch||camera.position.distanceTo(ch.position)>45)return;floatText('💬 '+m.text,ch,'rgba(30,32,48,.88)',4000)};
+G.onSay=m=>{const ch=charOf(m.id);if(!ch||camera.position.distanceTo(ch.position)>45)return;floatText('💬 '+m.text,ch,'rgba(30,32,48,.88)',4000);if(camera.position.distanceTo(ch.position)<24)speak(m.text,{ch})};
 G.onFx=m=>{if(m.k==='shot'&&!m.to){const a=charOf(m.id)||(G.ME&&m.id===G.ME.id?me:null);SND.shot?SND.shot():0;if(a){a.userData.gun=1;a.userData.fx.fire=performance.now();const f=new THREE.Vector3(Math.sin(m.ry),0,Math.cos(m.ry));tracer(a.position.clone().addScaledVector(f,.8),a.position.clone().addScaledVector(f,40))}return}if(m.k==='jack'){const c=charOf(m.id);if(c)c.userData.fx.punch=performance.now();return}if(m.k==='lathi'||m.k==='shot'){if(m.k==='shot'){SND.shot?SND.shot():SND.punch&&SND.punch();const a=charOf(m.id),b=charOf(m.to);if(a&&b)tracer(a.position,b.position)}else SND.punch&&SND.punch();m={...m,k:'punch'}}if(m.k==='ko'){m={...m,k:'hit'}}if(m.k==='whistle'&&SND.whistle)SND.whistle();const ch=charOf(m.id);const now=performance.now();if(m.k==='punch'&&G.ME&&m.id===G.ME.id)return;if(ch)ch.userData.fx[m.k==='hit'?'hit':m.k]=now;
  if(m.k==='push'&&G.ME&&m.id===G.ME.id){P.x+=m.dx*1.5;P.z+=m.dz*1.5;collide();P.sit=0;return}
  if(m.k==='act'&&ch&&ch!==me)burst(ch.position.x,1.5,ch.position.z,'#ffd166',8,1.5);
@@ -658,7 +666,10 @@ const dlgEl=ui('dlg','position:fixed;left:50%;bottom:calc(10px + env(safe-area-i
 const wantEl=ui('wanted','position:fixed;left:50%;top:52px;transform:translateX(-50%);z-index:30;padding:2px 12px;border-radius:14px;background:rgba(120,0,0,.75);color:#ffd34d;font-size:20px;letter-spacing:2px;display:none;pointer-events:none');
 const jailEl=ui('jailo','position:fixed;inset:0;z-index:34;pointer-events:none;display:none;background:repeating-linear-gradient(90deg,rgba(20,20,20,.55) 0 10px,transparent 10px 70px);color:#fff;font:700 22px Mukta,sans-serif;text-align:center;padding-top:70px;text-shadow:0 2px 6px #000');
 const gigEl=ui('gigp','position:fixed;left:50%;top:84px;transform:translateX(-50%);z-index:30;padding:3px 12px;border-radius:12px;background:rgba(255,159,28,.92);color:#222;font:600 14px Mukta,sans-serif;display:none;pointer-events:none');
-function speak(text,o){try{if(!window.speechSynthesis||localStorage.getItem('zmute')==='1')return;const t=String(text).replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF]/gu,'').trim();if(!t)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t.slice(0,160));u.lang='hi-IN';const f=o&&o.ch&&o.ch.userData.g==='f';const vs=speechSynthesis.getVoices().filter(v=>/^hi/i.test(v.lang));const v=vs.find(v=>f?/female|swara|kalpana|lekha/i.test(v.name):/male|madhur|hemant/i.test(v.name)&&!/female/i.test(v.name))||vs[0];if(v)u.voice=v;u.pitch=f?1.25:.9;u.rate=1;u.volume=.55;speechSynthesis.speak(u)}catch(e){}}
+let __spkReady=0;function unlockSpeech(){if(__spkReady||!window.speechSynthesis)return;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;u.lang='hi-IN';speechSynthesis.speak(u);speechSynthesis.cancel();__spkReady=1}catch(e){}}
+document.addEventListener('pointerdown',()=>{unlockSpeech();try{SND&&SND.init()}catch(e){}},{passive:true});
+try{speechSynthesis&&speechSynthesis.addEventListener('voiceschanged',()=>{})}catch(e){}
+function speak(text,o){try{if(!window.speechSynthesis||localStorage.getItem('zmute')==='1')return;unlockSpeech();const t=String(text).replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF]/gu,'').trim();if(!t)return;speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t.slice(0,160));u.lang='hi-IN';const ch=o&&(o.ch||o);const f=!!(ch&&ch.userData&&ch.userData.g==='f');const seed=(ch&&ch.userData&&(ch.userData.seed||ch.userData.pid))||(f?'zoya':'npc');const V=window.VOICE;u.pitch=V?V.voicePitch(seed,f):(f?1.2:.9);u.rate=V?V.voiceRate(seed):1;u.volume=.62;const vs=speechSynthesis.getVoices().filter(v=>/^hi/i.test(v.lang)||/hindi/i.test(v.name));const v=vs.find(v=>f?/female|swara|kalpana|lekha|veena/i.test(v.name):/male|madhur|hemant|ravi/i.test(v.name)&&!/female/i.test(v.name))||vs[0];if(v)u.voice=v;if(ch&&ch.userData){ch.userData.fx=ch.userData.fx||{};ch.userData.fx.talk=performance.now()}speechSynthesis.speak(u)}catch(e){}}
 function closeDlg(){DLG=null;dlgEl.style.display='none'}
 G.onDlg=m=>{if(m.close)return closeDlg();DLG=m;const hearts='❤️'.repeat(Math.min(5,Math.ceil(m.dost/2)))+'🤍'.repeat(5-Math.min(5,Math.ceil(m.dost/2)));
  dlgEl.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px">'+m.name+'</b><span style="font-size:12px">दोस्ती '+hearts+' <button id="dlgx" style="border:none;background:#eee;border-radius:10px;padding:2px 8px;margin-left:6px">✕</button></span></div><div style="margin:4px 0 8px;font-size:15px">'+m.text+'</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+
@@ -677,10 +688,66 @@ G.onKo=m=>{const w=m.k==='wasted';closeDlg();renderer.domElement.style.transitio
  koEl.innerHTML='<div style="font-size:min(18vw,110px);color:'+(w?'#c8102e':'#f2f2f2')+';text-shadow:0 0 6px #000,4px 4px 0 #000;letter-spacing:4px">'+(w?'WASTED':'BUSTED')+'</div><div style="color:#fff;font:600 18px Mukta,sans-serif;text-shadow:0 2px 4px #000">'+(w?'🏥 अस्पताल का बिल ₹'+m.amt:'🚔 थाने पर जुर्माना ₹'+m.amt)+'</div>';koEl.style.display='flex';SND.hit&&SND.hit();if(navigator.vibrate)navigator.vibrate([80,60,200]);
  if(DRV)DRV=null;setTimeout(()=>{P.x=m.x;P.z=m.z;sendPos(true);renderer.domElement.style.filter='';G.__animSlow=1;koEl.style.display='none';G.toast&&G.toast(w?'🏥 अस्पताल में होश आया':'🚔 थाने के बाहर छोड़ा')},3000)};
 
-// ---------- NPC command feedback, owner tools, girlfriend summon ----------
+// ---------- NPC command feedback, owner wife tools, voice PTT ----------
 G.onCmdOk=m=>{G.toast&&G.toast('✅ '+m.name+': '+(m.text||m.k));speak(m.text||'ठीक है',others.get(m.id))};
 const gfBtn=ui('gfbtn','position:fixed;right:calc(12px + env(safe-area-inset-right));top:150px;z-index:31;display:none;border-radius:22px;padding:7px 12px;background:rgba(232,62,111,.92);color:#fff;font:700 14px Mukta,sans-serif;box-shadow:0 3px 10px rgba(0,0,0,.3);cursor:pointer');
-gfBtn.textContent='❤️ बुलाओ';gfBtn.onclick=()=>{SND.click&&SND.click();G.S&&G.S({t:'gfcall'})};
+gfBtn.textContent='💍 बुलाओ';gfBtn.onclick=()=>{SND.click&&SND.click();G.S&&G.S({t:'gfcall'})};
+const homeBtn=ui('homebtn','position:fixed;right:calc(12px + env(safe-area-inset-right));top:190px;z-index:31;display:none;border-radius:22px;padding:7px 12px;background:rgba(230,126,34,.95);color:#fff;font:700 14px Mukta,sans-serif;box-shadow:0 3px 10px rgba(0,0,0,.3);cursor:pointer');
+homeBtn.textContent='🏠 घर';homeBtn.onclick=()=>{SND.click&&SND.click();G.S&&G.S({t:'wifego'})};
+const goHomeWife=ui('gfhomeb','position:fixed;right:calc(12px + env(safe-area-inset-right));top:230px;z-index:31;display:none;border-radius:22px;padding:7px 12px;background:rgba(142,68,173,.92);color:#fff;font:700 13px Mukta,sans-serif;box-shadow:0 3px 10px rgba(0,0,0,.3);cursor:pointer');
+goHomeWife.textContent='🏠 पत्नी घर';goHomeWife.onclick=()=>{SND.click&&SND.click();G.S&&G.S({t:'gfhome'})};
+const wifeBar=ui('wifebar','position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + env(safe-area-inset-bottom));z-index:32;display:none;gap:6px;flex-wrap:wrap;justify-content:center');
+wifeBar.style.display='none';
+['💋','🤗','🤝','🌅','🍽️','💬'].forEach((em,i)=>{const b=document.createElement('button');b.textContent=em;b.style.cssText='border:0;border-radius:50%;width:48px;height:48px;font-size:22px;background:rgba(20,22,40,.72);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer';b.dataset.i=i;wifeBar.appendChild(b)});
+const WKEYS=['kiss','hug','hand','beach','dinner','chat'];
+wifeBar.querySelectorAll('button').forEach(b=>b.onclick=e=>{e.stopPropagation();SND.click&&SND.click();const k=WKEYS[+b.dataset.i];if(k==='chat'){openWchat();return}G.S&&G.S({t:'wife',k})});
+function nearWife(){if(!G.GF)return false;const o=others.get(G.GF.id);if(!o)return false;return Math.hypot(o.ch.position.x-P.x,o.ch.position.z-P.z)<5.2}
+setInterval(()=>{const on=!!G.GF;gfBtn.style.display=homeBtn.style.display=goHomeWife.style.display=on?'block':'none';wifeBar.style.display=on&&nearWife()&&!DRV?'flex':'none'},400);
+
+// private wife chat panel
+const wchatEl=ui('wchat','position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:65;display:none;width:min(420px,92vw);max-height:70vh;background:rgba(255,248,252,.98);border-radius:18px;padding:12px;box-shadow:0 10px 40px rgba(0,0,0,.4);font:15px Mukta,sans-serif;flex-direction:column');
+function openWchat(){wchatEl.style.display='flex';wchatEl.innerHTML='<div style="display:flex;justify-content:space-between;font-weight:800;margin-bottom:8px">💬 ज़ोया (निजी)<button id="wcx" style="border:0;border-radius:10px;padding:2px 8px;background:#eee">✕</button></div><div id="wcl" style="flex:1;overflow:auto;min-height:160px;max-height:40vh;background:#fff;border-radius:12px;padding:8px;border:1px solid #f0d0e0"></div><form id="wcf" style="display:flex;gap:6px;margin-top:8px"><input id="wci" maxlength="200" placeholder="पत्नी से निजी बात…" style="flex:1;border:1px solid #e0b0c8;border-radius:14px;padding:8px 10px;font:15px Mukta"><button style="border:0;border-radius:14px;padding:8px 12px;background:#e83e6f;color:#fff;font-weight:700">भेजो</button></form>';
+ wchatEl.querySelector('#wcx').onclick=()=>wchatEl.style.display='none';
+ const fm=wchatEl.querySelector('#wcf'),ip=wchatEl.querySelector('#wci');
+ fm.onsubmit=e=>{e.preventDefault();const v=ip.value.trim();if(!v)return;G.S&&G.S({t:'wchat',text:v});ip.value=''};G.S&&G.S({t:'wchat',text:''})}
+G.onWchat=m=>{const c=document.getElementById('wcl');if(!c){if(m.msgs){openWchat();setTimeout(()=>G.onWchat(m),50)}return}
+ c.innerHTML=(m.msgs||[]).map(x=>'<div style="margin:4px 0;text-align:'+(x.from==='me'?'right':'left')+'"><span style="display:inline-block;padding:6px 10px;border-radius:12px;background:'+(x.from==='me'?'#5b6cff':'#ffe0ec')+';color:'+(x.from==='me'?'#fff':'#333')+'">'+String(x.text).replace(/[<>]/g,'')+'</span></div>').join('');c.scrollTop=c.scrollHeight;if(m.msgs&&m.msgs.length){const last=m.msgs[m.msgs.length-1];if(last.from==='her')speak(last.text,others.get(G.GF&&G.GF.id))}};
+G.onWifefx=m=>{if(m.k==='warp'&&m.x!=null){P.x=m.x;P.z=m.z;sendPos(true);return}
+ if(m.text){G.toast&&G.toast(m.text);const o=others.get(m.id||(G.GF&&G.GF.id));speak(m.text,o);if(o&&o.ch){o.ch.userData.fx=o.ch.userData.fx||{};o.ch.userData.fx.talk=performance.now();if(m.k==='hug')o.ch.userData.fx.act=performance.now();if(m.k==='kiss'||m.k==='hand')o.ch.userData.fx.wave=performance.now()}
+  if(me&&(m.k==='hug'||m.k==='kiss')){me.userData.fx.act=performance.now();floatText(m.k==='kiss'?'💋':'🤗',me,'rgba(232,62,111,.9)',1200)}}
+ if(m.k==='hand'&&G.GF){const o=others.get(G.GF.id);if(o)G.__holdHand=G.GF.id;G.toast&&G.toast('🤝 हाथ में हाथ — साथ चलो')}};
+
+// ---- Voice push-to-talk (Web Speech API, hi-IN, iOS-safe start-in-tap) ----
+const micBtn=ui('micB','position:fixed;left:calc(14px + env(safe-area-inset-left));bottom:calc(200px + env(safe-area-inset-bottom));z-index:33;width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,.5);background:rgba(91,108,255,.55);color:#fff;font:700 28px Mukta,sans-serif;display:flex;align-items:center;justify-content:center;touch-action:manipulation;user-select:none;backdrop-filter:blur(4px);box-shadow:0 4px 14px rgba(0,0,0,.35)');
+micBtn.textContent='🎤';micBtn.title='बोलकर बात करो';
+const vBub=ui('vbub','position:fixed;left:50%;bottom:calc(220px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:34;display:none;max-width:80vw;padding:8px 14px;border-radius:16px;background:rgba(20,22,40,.88);color:#fff;font:600 15px Mukta,sans-serif;pointer-events:none;text-align:center');
+let __rec=null,__voiceIn=0;
+function stopVoiceUI(){micBtn.textContent='🎤';micBtn.style.background='rgba(91,108,255,.55)';vBub.style.display='none';__voiceIn=0}
+function sendVoiceText(raw){const V=window.VOICE;const text=V?V.cleanTranscript(raw):String(raw||'').trim();if(!text)return;__voiceIn=1;
+ if(V&&V.isOwnerSlash(text)){G.S&&G.S({t:'ocmd',text:text});G.toast&&G.toast('👑 '+text);return}
+ if(DLG){G.S&&G.S({t:'say',id:DLG.id,text});return}
+ const list=[];for(const [id,o] of others){if(o.ch&&o.ch.userData&&o.ch.userData.role)list.push({id,role:o.ch.userData.role,x:o.ch.position.x,z:o.ch.position.z})}
+ const tid=V?V.pickTarget(list,{x:P.x,z:P.z,gfId:G.GF&&G.GF.id,dlgId:null}):null;
+ if(!tid){G.toast&&G.toast('🎤 पास कोई NPC नहीं — पास जाकर बोलो');return}
+ G.S&&G.S({t:'say',id:tid,text});G.toast&&G.toast('🗣️ '+text.slice(0,40))}
+function startVoice(ev){if(ev){ev.preventDefault();ev.stopPropagation()}
+ const SR=(window.VOICE&&VOICE.SR&&VOICE.SR())||window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){G.toast&&G.toast('🎤 आवाज़ इस ब्राउज़र में नहीं चलती। iPhone: Settings → Safari → Microphone ऑन करो।');return}
+ unlockSpeech();try{SND&&SND.init()}catch(e){}
+ try{if(__rec){try{__rec.abort()}catch(e){}}
+  __rec=new SR();__rec.lang='hi-IN';__rec.interimResults=true;__rec.continuous=false;__rec.maxAlternatives=2;
+  vBub.style.display='block';vBub.textContent='🎤 सुन रहा हूँ… बोलो';micBtn.textContent='🔴';micBtn.style.background='rgba(200,40,40,.75)';
+  __rec.onresult=e=>{let interim='',final='';for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)final+=t;else interim+=t}
+   vBub.textContent='🎤 '+(final||interim||'…');if(final){sendVoiceText(final);try{__rec.stop()}catch(e){}}};
+  __rec.onerror=e=>{const map={'not-allowed':'माइक अनुमति नहीं मिली। Settings → Safari → Microphone ऑन करो।','service-not-allowed':'माइक बंद है।','no-speech':'कुछ सुनाई नहीं दिया — फिर दबाओ।','network':'नेटवर्क समस्या — फिर कोशिश करो।','aborted':''};
+   const msg=map[e.error];if(msg)G.toast&&G.toast('🎤 '+msg);stopVoiceUI()};
+  __rec.onend=()=>stopVoiceUI();
+  __rec.start(); // iOS: must be inside tap handler
+ }catch(e){G.toast&&G.toast('🎤 माइक शुरू नहीं हो सका');stopVoiceUI()}}
+micBtn.addEventListener('pointerdown',startVoice);
+// upgrade dialog mic too
+const _onDlg=G.onDlg;G.onDlg=m=>{_onDlg(m);if(m.close)return;const mic=document.getElementById('dlgm');if(mic)mic.onclick=ev=>{ev.preventDefault();startVoice(ev)}}
+
 
 // ---------- Batch 3 HUD: 🔑 मेरी गाड़ी, showroom panel, licence, gun shop, 🔫 fire / crouch ----------
 const B3={gar:null,cars:[]};{
@@ -709,10 +776,11 @@ const B3={gar:null,cars:[]};{
   B3.call.style.display=has&&B3.cars.length?'inline-block':'none';B3.show.style.display=has&&ZS&&d(ZS)<32?'inline-block':'none';
   B3.lic.style.display=has&&!G.ME.lic&&!B3.licOk&&Math.hypot(P.x+30,P.z+30)<24?'inline-block':'none';B3.gun.style.display=has&&ZG&&d(ZG)<32&&!B3.hasGun?'inline-block':'none';
   const gun=has&&(B3.hasGun||G.ME.admin);fb.style.display=cb.style.display=rb.style.display=gun?'block':'none';if(me&&gun)me.userData.gun=1}}
-G.GF=null;G.onGf=m=>{G.GF=m;gfBtn.style.display='block';gfBtn.title=m.name};
+G.GF=null;G.onGf=m=>{G.GF=m;gfBtn.style.display='block';gfBtn.title=m.name||'ज़ोया (पत्नी)';gfBtn.textContent='💍 बुलाओ'};
 G.onOwner=m=>{if(m.k==='time'){window.__dayOverride=m.ph==null?undefined:m.ph}else if(m.k==='weather'){const w=m.w;scene.fog&&(scene.fog.density!==undefined?(scene.fog.density=w==='kohra'?.03:w==='baarish'?.012:scene.fog.density):(scene.fog.far=w==='kohra'?60:w==='baarish'?140:VIEW*1.2));G.RAIN=w==='baarish';G.toast&&G.toast(w==='baarish'?'🌧️ बारिश':w==='kohra'?'🌫️ कोहरा':'☀️ साफ़ मौसम')}};
 const ARW=['⬆️','↗️','➡️','↘️','⬇️','↙️','⬅️','↖️'];
 function npcUi(now){
+ if(G.__holdHand){const o=others.get(G.__holdHand);if(!o||Math.hypot(o.ch.position.x-P.x,o.ch.position.z-P.z)>14)G.__holdHand=null;else if(me){me.userData.fx.wave=me.userData.fx.wave||0}}
  if(JAIL){const r=Math.max(0,Math.ceil((JAIL.until-now)/1000));jailEl.innerHTML='🚔 थाने के लॉक-अप में<br><span style="font-size:40px">'+r+'s</span><br><span style="font-size:15px">जुर्माना भरा गया — समय पूरा होने पर रिहाई</span>';P.x=Math.max(-32.4,Math.min(-27.6,P.x));P.z=Math.max(-49.4,Math.min(-44.6,P.z))}
  if(GIG){const dx=GIG.x-P.x,dz=GIG.z-P.z,a=Math.atan2(dx,-dz)+yaw;gigEl.textContent='📦 '+GIG.n+' तक पहुँचाओ · ₹'+GIG.pay+' · '+Math.round(Math.hypot(dx,dz))+'m '+ARW[((Math.round(-a/(Math.PI/4))%8)+8)%8]}
  if(DLG){const o=others.get(DLG.id);if(!o||Math.hypot(o.ch.position.x-P.x,o.ch.position.z-P.z)>7)closeDlg()}
